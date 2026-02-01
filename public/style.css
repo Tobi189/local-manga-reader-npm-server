@@ -137,6 +137,30 @@ button {
   user-select: none;
 }
 
+.pageIndicator {
+  margin-top: 10px;
+  text-align: center;
+  font-size: 1rem;
+  font-weight: 600;
+
+  color: #e8e8e8;
+  background: rgba(0, 0, 0, 0.35);
+
+  display: inline-block;
+  padding: 6px 14px;
+  border-radius: 999px;
+
+  /* center the pill */
+  position: relative;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.pageIndicator.hidden {
+  display: none;
+}
+
+
 .navZone:hover .navBtn {
   background: rgba(0, 0, 0, 0.18);
   color: rgba(255, 255, 255, 0.92);

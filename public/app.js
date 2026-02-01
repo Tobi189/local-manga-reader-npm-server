@@ -13,6 +13,8 @@ const navRight = document.getElementById("navRight");
 const btnLeft = document.getElementById("btnLeft");   // forward
 const btnRight = document.getElementById("btnRight"); // back
 
+const pageIndicator = document.getElementById("pageIndicator");
+
 let chapters = [];
 let pages = [];        // filenames
 let spreadIndex = 0;   // 0..totalSpreads-1
@@ -115,7 +117,54 @@ function renderVertical() {
     pagesDiv.appendChild(buildImg(imgUrl(manga, chapter, file)));
   }
   window.scrollTo({ top: 0, behavior: "instant" });
+  updateBottomIndicator();
+
 }
+
+function spreadPageNumbers(si) {
+  // Returns 1-based real page numbers in reading order (RTL: right page first)
+  // spread 0: [1]
+  // spread 1: [2,3]
+  // spread 2: [4,5]
+  // last single: [N]
+  if (pages.length === 0) return [];
+
+  if (si === 0) return [1];
+
+  const start = 1 + (si - 1) * 2;     // 0-based index of the "right" page
+  const rightIdx = start;
+  const leftIdx = start + 1;
+
+  if (rightIdx >= pages.length) return [];
+
+  const rightPage = rightIdx + 1;     // to 1-based
+  const leftPage = leftIdx + 1;
+
+  // If only one page remains (your last single spread case)
+  if (leftIdx >= pages.length) return [rightPage];
+
+  return [rightPage, leftPage];
+}
+
+function updateBottomIndicator() {
+  if (modeSel.value !== "horizontal" || pages.length === 0) {
+    pageIndicator.classList.add("hidden");
+    pageIndicator.textContent = "";
+    return;
+  }
+
+  pageIndicator.classList.remove("hidden");
+
+  const total = pages.length;
+  const nums = spreadPageNumbers(spreadIndex);
+
+  if (nums.length === 1) {
+    pageIndicator.textContent = `Page ${nums[0]} / ${total}`;
+  } else {
+    pageIndicator.textContent = `Pages ${nums[0]}–${nums[1]} / ${total}`;
+  }
+}
+
 
 function renderHorizontal() {
   pagesDiv.className = "horizontal";
@@ -141,6 +190,9 @@ function renderHorizontal() {
   pagesDiv.appendChild(frame);
 
   updateInfo();
+
+  updateBottomIndicator();
+
   window.scrollTo({ top: 0, behavior: "instant" });
 }
 
