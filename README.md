@@ -1,5 +1,8 @@
-File structure:
 
+````md
+## File structure
+
+```text
 manga-reader/
 ├─ server.js
 ├─ package.json
@@ -22,14 +25,23 @@ manga-reader/
          ├─ page_1.webp
          ├─ page_2.webp
          └─ ...
+````
 
-How to run:
+## How to run
 
-1) Install dependencies (once)
+1. Install dependencies (once)
+
+   ```bash
    npm install
+   ```
 
-2) Start the server
+2. Start the server
+
+   ```bash
    node server.js
+   ```
 
-   You should see something like:
-   Manga reader running at http://localhost:5173
+You should see something like: `Manga reader running at http://localhost:5173`
+
+```
+
