@@ -1,4 +1,4 @@
-file structure:
+File structure:
 
 manga-reader/
 ├─ server.js
@@ -22,15 +22,14 @@ manga-reader/
          ├─ page_1.webp
          ├─ page_2.webp
          └─ ...
+
 How to run:
-1) install dependencies (once)
+
+1) Install dependencies (once)
    npm install
-2) start the server
+
+2) Start the server
    node server.js
-   
-   You should see sth like: Manga reader running at http://localhost:5173
 
-
-
-
-
+   You should see something like:
+   Manga reader running at http://localhost:5173
