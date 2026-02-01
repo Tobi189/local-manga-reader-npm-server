@@ -1,0 +1,52 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Local Manga Reader</title>
+  <link rel="stylesheet" href="/style.css"/>
+</head>
+<body>
+  <div class="topbar">
+    <div class="row">
+      <div class="field">
+        <div class="muted">Manga</div>
+        <select id="manga"></select>
+      </div>
+
+      <div class="field">
+        <div class="muted">Chapter</div>
+        <select id="chapter"></select>
+      </div>
+
+      <div class="field">
+        <div class="muted">Mode</div>
+        <select id="mode">
+          <option value="vertical" selected>Vertical</option>
+          <option value="horizontal">Horizontal (spreads)</option>
+        </select>
+      </div>
+
+      <button id="prevChapter">Prev Chapter</button>
+      <button id="nextChapter">Next Chapter</button>
+
+      <span id="pageInfo" class="muted"></span>
+    </div>
+  </div>
+
+  <div id="viewer" class="viewer">
+    <!-- hover-only full-height nav zones (only used in horizontal mode) -->
+    <div id="navLeft" class="navZone navLeft hidden">
+      <button id="btnLeft" class="navBtn" aria-label="Next spread (forward)">&lt;</button>
+    </div>
+
+    <div id="navRight" class="navZone navRight hidden">
+      <button id="btnRight" class="navBtn" aria-label="Previous spread (back)">&gt;</button>
+    </div>
+
+    <div id="pages"></div>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>

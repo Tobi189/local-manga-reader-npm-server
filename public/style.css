@@ -1,0 +1,143 @@
+:root {
+  --ui-font: 1rem;      /* scales with zoom */
+  --muted-font: 0.9rem;
+  --gap: 12px;
+}
+
+body {
+  font-family: system-ui, Arial, sans-serif;
+  margin: 16px;
+}
+
+.topbar {
+  position: sticky;
+  top: 0;
+  background: white;
+  padding: 10px 0;
+  border-bottom: 1px solid #eee;
+  z-index: 10;
+}
+
+.row {
+  display: flex;
+  gap: var(--gap);
+  flex-wrap: wrap;
+  align-items: end;
+}
+
+.field select {
+  font-size: var(--ui-font);
+  padding: 8px 10px;
+}
+
+button {
+  font-size: var(--ui-font);
+  padding: 8px 10px;
+  cursor: pointer;
+}
+
+.muted {
+  color: #666;
+  font-size: var(--muted-font);
+}
+
+#pageInfo {
+  align-self: center;
+}
+
+.viewer {
+  position: relative;
+  margin-top: 12px;
+}
+
+/* ----------------------------
+   Vertical mode
+----------------------------- */
+#pages.vertical img {
+  width: min(100%, 900px);
+  display: block;
+  margin: 12px auto;
+  height: auto;
+}
+
+/* ----------------------------
+   Horizontal mode (spread stepper)
+   Two slots: left + right (JP reading, but we render as left/right visually)
+----------------------------- */
+#pages.horizontal {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.spreadFrame {
+  display: flex;
+  gap: 0;               /* no space between pages */
+  justify-content: center;
+  align-items: flex-start;
+  width: min(1100px, calc(100vw - 24px));
+}
+
+
+.pageSlot {
+  flex: 1 1 0;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+/* Images in horizontal mode: fit height, keep aspect */
+.pageSlot img {
+  max-height: calc(100vh - 180px);
+  max-width: 100%;
+  height: auto;
+  width: auto;
+  display: block;
+}
+
+/* ----------------------------
+   Hover-only nav zones
+   Full height of the frame
+----------------------------- */
+.navZone {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 120px;                /* “stretched horizontally” */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease;
+}
+
+.viewer:hover .navZone:not(.hidden) {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.navLeft { left: 0; }
+.navRight { right: 0; }
+
+.hidden { display: none; }
+
+.navBtn {
+  width: 100%;
+  height: 100%;
+  border: none;
+
+  /* transparent button that becomes visible on hover */
+  background: rgba(0, 0, 0, 0.0);
+  color: rgba(255, 255, 255, 0.0);
+
+  font-size: 52px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.navZone:hover .navBtn {
+  background: rgba(0, 0, 0, 0.18);
+  color: rgba(255, 255, 255, 0.92);
+}
