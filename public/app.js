@@ -19,6 +19,15 @@ let spreadIndex = 0;   // 0..totalSpreads-1
 
 const PLACEHOLDER_URL = "/placeholder.jpg";
 
+function blurActiveIfFormControl() {
+  const el = document.activeElement;
+  if (!el) return;
+  const tag = el.tagName?.toLowerCase();
+  if (tag === "select" || tag === "input" || tag === "textarea" || tag === "button") {
+    el.blur();
+  }
+}
+
 function imgUrl(manga, chapter, file) {
   return `/img?manga=${encodeURIComponent(manga)}&chapter=${encodeURIComponent(chapter)}&file=${encodeURIComponent(file)}`;
 }
@@ -63,9 +72,10 @@ function spreadSources(si) {
   // If only one page is left (your “even page count => last single page” case),
   // show that page on LEFT and placeholder on RIGHT.
   if (rightIdx < pages.length && leftIdx >= pages.length) {
-    const left = imgUrl(manga, chapter, pages[rightIdx]);
-    return [left, PLACEHOLDER_URL];
-  }
+  const right = imgUrl(manga, chapter, pages[rightIdx]);
+  return [PLACEHOLDER_URL, right];
+}
+
 
   // Normal two-page spread (RTL reading):
   // Visual layout is [left, right], but reading order is right then left.
@@ -184,13 +194,22 @@ async function loadPages() {
 }
 
 // --- Events ---
-mangaSel.addEventListener("change", loadChapters);
-chapterSel.addEventListener("change", loadPages);
+mangaSel.addEventListener("change", async () => {
+  await loadChapters();
+  blurActiveIfFormControl();
+});
+
+chapterSel.addEventListener("change", async () => {
+  await loadPages();
+  blurActiveIfFormControl();
+});
 
 modeSel.addEventListener("change", () => {
   spreadIndex = 0;
   render();
+  blurActiveIfFormControl();
 });
+
 
 // Chapter nav
 prevChapterBtn.addEventListener("click", () => {
