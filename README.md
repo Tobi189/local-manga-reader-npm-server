@@ -11,7 +11,7 @@ manga-reader/
 ├─ README.md
 ├─ placeholder.jpg           # used in horizontal (spread) view
 ├─ library/                  # your local manga (ignored by git)
-│  ├─ One Piece/
+│  ├─ One Piece/             # honestly fuck One Piece i ain't readin' it ChatGPT fucking generated this shit
 │  │  ├─ ch_001/
 │  │  │  ├─ image1.jpg
 │  │  │  ├─ image2.jpg
