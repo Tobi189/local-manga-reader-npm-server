@@ -1,4 +1,3 @@
-
 ````md
 ## File structure
 
@@ -10,21 +9,26 @@ manga-reader/
 ├─ .gitignore
 ├─ .gitattributes
 ├─ README.md
-└─ library/                 # your local manga (ignored by git)
-   ├─ One Piece/
-   │  ├─ ch_001/
-   │  │  ├─ image1.jpg
-   │  │  ├─ image2.jpg
-   │  │  └─ ...
-   │  └─ ch_002/
-   │     ├─ 001.png
-   │     ├─ 002.png
-   │     └─ ...
-   └─ Berserk/
-      └─ 001/
-         ├─ page_1.webp
-         ├─ page_2.webp
-         └─ ...
+├─ placeholder.jpg           # used in horizontal (spread) view
+├─ library/                  # your local manga (ignored by git)
+│  ├─ One Piece/
+│  │  ├─ ch_001/
+│  │  │  ├─ image1.jpg
+│  │  │  ├─ image2.jpg
+│  │  │  └─ ...
+│  │  └─ ch_002/
+│  │     ├─ 001.png
+│  │     ├─ 002.png
+│  │     └─ ...
+│  └─ Berserk/
+│     └─ 001/
+│        ├─ page_1.webp
+│        ├─ page_2.webp
+│        └─ ...
+└─ public/
+   ├─ index.html
+   ├─ app.js
+   └─ style.css
 ````
 
 ## How to run
@@ -41,7 +45,14 @@ manga-reader/
    node server.js
    ```
 
+Open:
+
+```text
+http://localhost:5173
+```
+
 You should see something like: `Manga reader running at http://localhost:5173`
 
 ```
-
+::contentReference[oaicite:0]{index=0}
+```
