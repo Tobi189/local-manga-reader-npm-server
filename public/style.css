@@ -9,6 +9,15 @@ body {
   margin: 16px;
 }
 
+/* Make pages touch in the middle (remove center gap at high zoom) */
+.pageSlot.leftSlot {
+  justify-content: flex-end;   /* push left page to the right */
+}
+
+.pageSlot.rightSlot {
+  justify-content: flex-start; /* push right page to the left */
+}
+
 .topbar {
   position: sticky;
   top: 0;

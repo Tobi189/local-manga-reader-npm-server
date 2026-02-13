@@ -185,6 +185,10 @@ function renderHorizontal() {
   leftSlot.appendChild(buildImg(leftSrc));
   rightSlot.appendChild(buildImg(rightSrc));
 
+  leftSlot.classList.add("leftSlot");
+  rightSlot.classList.add("rightSlot");
+
+
   frame.appendChild(leftSlot);
   frame.appendChild(rightSlot);
   pagesDiv.appendChild(frame);
