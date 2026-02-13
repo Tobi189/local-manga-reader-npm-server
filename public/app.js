@@ -15,6 +15,24 @@ const btnRight = document.getElementById("btnRight"); // back
 
 const pageIndicator = document.getElementById("pageIndicator");
 
+const LS_KEY = "mangaReaderPrefs:v1";
+
+function loadPrefs() {
+  try { return JSON.parse(localStorage.getItem(LS_KEY) || "{}"); }
+  catch { return {}; }
+}
+
+function savePrefs(prefs) {
+  localStorage.setItem(LS_KEY, JSON.stringify(prefs));
+}
+
+function updatePrefs(patch) {
+  const prefs = loadPrefs();
+  const next = { ...prefs, ...patch };
+  savePrefs(next);
+  return next;
+}
+
 let chapters = [];
 let pages = [];        // filenames
 let spreadIndex = 0;   // 0..totalSpreads-1
@@ -229,17 +247,41 @@ function backSpread() {
 
 // --- Data loading ---
 async function loadManga() {
+  const prefs = loadPrefs();
+
+  // restore mode first (so UI shows right)
+  if (prefs.mode) modeSel.value = prefs.mode;
+
   const m = await fetch("/api/manga").then(r => r.json());
   mangaSel.innerHTML = m.map(x => `<option>${x}</option>`).join("");
-  await loadChapters();
+
+  // restore manga if still exists
+  if (prefs.manga && m.includes(prefs.manga)) {
+    mangaSel.value = prefs.manga;
+  }
+
+  await loadChapters(); // loadChapters will restore chapter
 }
+
 
 async function loadChapters() {
   const manga = mangaSel.value;
+  const prefs = loadPrefs();
+
   chapters = await fetch(`/api/chapters?manga=${encodeURIComponent(manga)}`).then(r => r.json());
   chapterSel.innerHTML = chapters.map(x => `<option>${x}</option>`).join("");
+
+  // restore last chapter for this manga (or global fallback)
+  const rememberedChapter =
+    (prefs.lastChapterByManga && prefs.lastChapterByManga[manga]) || prefs.chapter;
+
+  if (rememberedChapter && chapters.includes(rememberedChapter)) {
+    chapterSel.value = rememberedChapter;
+  }
+
   await loadPages();
 }
+
 
 async function loadPages() {
   const manga = mangaSel.value;
@@ -261,6 +303,33 @@ chapterSel.addEventListener("change", async () => {
 });
 
 modeSel.addEventListener("change", () => {
+  spreadIndex = 0;
+  render();
+  blurActiveIfFormControl();
+});
+
+mangaSel.addEventListener("change", async () => {
+  updatePrefs({ manga: mangaSel.value });
+  await loadChapters();
+  blurActiveIfFormControl();
+});
+
+chapterSel.addEventListener("change", async () => {
+  const manga = mangaSel.value;
+  const chapter = chapterSel.value;
+
+  const prefs = loadPrefs();
+  const lastChapterByManga = { ...(prefs.lastChapterByManga || {}) };
+  lastChapterByManga[manga] = chapter;
+
+  savePrefs({ ...prefs, manga, chapter, lastChapterByManga });
+
+  await loadPages();
+  blurActiveIfFormControl();
+});
+
+modeSel.addEventListener("change", () => {
+  updatePrefs({ mode: modeSel.value });
   spreadIndex = 0;
   render();
   blurActiveIfFormControl();
