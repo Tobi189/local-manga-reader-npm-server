@@ -15,6 +15,24 @@ const btnRight = document.getElementById("btnRight"); // back
 
 const pageIndicator = document.getElementById("pageIndicator");
 
+const LS_KEY = "mangaReaderPrefs:v1";
+
+function loadPrefs() {
+  try { return JSON.parse(localStorage.getItem(LS_KEY) || "{}"); }
+  catch { return {}; }
+}
+
+function savePrefs(prefs) {
+  localStorage.setItem(LS_KEY, JSON.stringify(prefs));
+}
+
+function updatePrefs(patch) {
+  const prefs = loadPrefs();
+  const next = { ...prefs, ...patch };
+  savePrefs(next);
+  return next;
+}
+
 let chapters = [];
 let pages = [];        // filenames
 let spreadIndex = 0;   // 0..totalSpreads-1
@@ -51,7 +69,7 @@ function totalSpreads() {
 
 /**
  * Returns [leftSrc, rightSrc] for a spread index, JP style:
- * spread 0: left=placeholder, right=page0
+ * spread 0: left=first page, right=placeholder
  * spread 1: right=page1, left=page2 (if exists else placeholder)
  * spread 2: right=page3, left=page4 ...
  */
@@ -71,16 +89,14 @@ function spreadSources(si) {
   const rightIdx = start;      // earlier page (RTL: goes on the RIGHT when we have two)
   const leftIdx = start + 1;   // later page (goes on the LEFT)
 
-  // If only one page is left (your “even page count => last single page” case),
+  // If only one page is left (your “last single page” case),
   // show that page on LEFT and placeholder on RIGHT.
   if (rightIdx < pages.length && leftIdx >= pages.length) {
-  const right = imgUrl(manga, chapter, pages[rightIdx]);
-  return [PLACEHOLDER_URL, right];
-}
-
+    const right = imgUrl(manga, chapter, pages[rightIdx]);
+    return [PLACEHOLDER_URL, right];
+  }
 
   // Normal two-page spread (RTL reading):
-  // Visual layout is [left, right], but reading order is right then left.
   const right = rightIdx < pages.length ? imgUrl(manga, chapter, pages[rightIdx]) : PLACEHOLDER_URL;
   const left  = leftIdx  < pages.length ? imgUrl(manga, chapter, pages[leftIdx])  : PLACEHOLDER_URL;
 
@@ -118,7 +134,6 @@ function renderVertical() {
   }
   window.scrollTo({ top: 0, behavior: "instant" });
   updateBottomIndicator();
-
 }
 
 function spreadPageNumbers(si) {
@@ -140,7 +155,7 @@ function spreadPageNumbers(si) {
   const rightPage = rightIdx + 1;     // to 1-based
   const leftPage = leftIdx + 1;
 
-  // If only one page remains (your last single spread case)
+  // If only one page remains (last single spread)
   if (leftIdx >= pages.length) return [rightPage];
 
   return [rightPage, leftPage];
@@ -165,7 +180,6 @@ function updateBottomIndicator() {
   }
 }
 
-
 function renderHorizontal() {
   pagesDiv.className = "horizontal";
   pagesDiv.innerHTML = "";
@@ -175,10 +189,10 @@ function renderHorizontal() {
   frame.className = "spreadFrame";
 
   const leftSlot = document.createElement("div");
-  leftSlot.className = "pageSlot";
+  leftSlot.className = "pageSlot leftSlot";
 
   const rightSlot = document.createElement("div");
-  rightSlot.className = "pageSlot";
+  rightSlot.className = "pageSlot rightSlot";
 
   const [leftSrc, rightSrc] = spreadSources(spreadIndex);
 
@@ -190,7 +204,6 @@ function renderHorizontal() {
   pagesDiv.appendChild(frame);
 
   updateInfo();
-
   updateBottomIndicator();
 
   window.scrollTo({ top: 0, behavior: "instant" });
@@ -225,6 +238,11 @@ function backSpread() {
 
 // --- Data loading ---
 async function loadManga() {
+  const prefs = loadPrefs();
+
+  // restore mode first (so UI shows right)
+  if (prefs.mode) modeSel.value = prefs.mode;
+
   const m = await fetch("/api/manga").then(r => r.json());
   mangaSel.innerHTML = m.map(x => `<option>${x}</option>`).join("");
 
@@ -234,15 +252,30 @@ async function loadManga() {
 
   if (mangaFromUrl && m.includes(mangaFromUrl)) {
     mangaSel.value = mangaFromUrl;
+    updatePrefs({ manga: mangaFromUrl });
+  } else if (prefs.manga && m.includes(prefs.manga)) {
+    // restore manga from prefs if still exists
+    mangaSel.value = prefs.manga;
   }
 
-  await loadChapters();
+  await loadChapters(); // loadChapters will restore chapter
 }
 
 async function loadChapters() {
   const manga = mangaSel.value;
+  const prefs = loadPrefs();
+
   chapters = await fetch(`/api/chapters?manga=${encodeURIComponent(manga)}`).then(r => r.json());
   chapterSel.innerHTML = chapters.map(x => `<option>${x}</option>`).join("");
+
+  // restore last chapter for this manga (or global fallback)
+  const rememberedChapter =
+    (prefs.lastChapterByManga && prefs.lastChapterByManga[manga]) || prefs.chapter;
+
+  if (rememberedChapter && chapters.includes(rememberedChapter)) {
+    chapterSel.value = rememberedChapter;
+  }
+
   await loadPages();
 }
 
@@ -255,22 +288,36 @@ async function loadPages() {
 }
 
 // --- Events ---
+
+// When manga changes: remember selection + reload chapters
 mangaSel.addEventListener("change", async () => {
+  updatePrefs({ manga: mangaSel.value });
   await loadChapters();
   blurActiveIfFormControl();
 });
 
+// When chapter changes: remember per-manga chapter + reload pages
 chapterSel.addEventListener("change", async () => {
+  const manga = mangaSel.value;
+  const chapter = chapterSel.value;
+
+  const prefs = loadPrefs();
+  const lastChapterByManga = { ...(prefs.lastChapterByManga || {}) };
+  lastChapterByManga[manga] = chapter;
+
+  savePrefs({ ...prefs, manga, chapter, lastChapterByManga });
+
   await loadPages();
   blurActiveIfFormControl();
 });
 
+// Mode change: remember + re-render
 modeSel.addEventListener("change", () => {
+  updatePrefs({ mode: modeSel.value });
   spreadIndex = 0;
   render();
   blurActiveIfFormControl();
 });
-
 
 // Chapter nav
 prevChapterBtn.addEventListener("click", () => {
