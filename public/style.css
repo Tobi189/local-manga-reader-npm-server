@@ -165,3 +165,57 @@ button {
   background: rgba(0, 0, 0, 0.18);
   color: rgba(255, 255, 255, 0.92);
 }
+
+/* ----------------------------
+   Library grid (covers)
+----------------------------- */
+.libraryWrap {
+  margin-top: 14px;
+}
+
+.libraryGrid {
+  display: grid;
+  gap: 14px;
+
+  /* Responsive grid:
+     tries to fit as many as possible, typically ~5 on desktop,
+     falls to 4/3/2/1 as the window shrinks */
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  align-items: start;
+}
+
+.mangaCard {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+}
+
+.mangaCover {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+  border-radius: 10px;
+  display: block;
+  background: #f2f2f2;
+  border: 1px solid #eee;
+}
+
+.mangaName {
+  margin-top: 8px;
+  font-size: 0.95rem;
+  text-align: center;
+
+  /* prevent ugly wrap explosions */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.linkBtn {
+  display: inline-block;
+  padding: 8px 10px;
+  border: 1px solid #eee;
+  border-radius: 10px;
+  text-decoration: none;
+  color: inherit;
+}

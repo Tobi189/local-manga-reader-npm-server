@@ -227,6 +227,15 @@ function backSpread() {
 async function loadManga() {
   const m = await fetch("/api/manga").then(r => r.json());
   mangaSel.innerHTML = m.map(x => `<option>${x}</option>`).join("");
+
+  // allow deep-link: /?manga=NAME
+  const qs = new URLSearchParams(location.search);
+  const mangaFromUrl = qs.get("manga");
+
+  if (mangaFromUrl && m.includes(mangaFromUrl)) {
+    mangaSel.value = mangaFromUrl;
+  }
+
   await loadChapters();
 }
 

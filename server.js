@@ -137,6 +137,45 @@ app.get("/img", (req, res) => {
   fs.createReadStream(filePath).pipe(res);
 });
 
+app.get("/placeholder.jpg", (req, res) => {
+  const p = path.join(__dirname, "placeholder.jpg");
+  if (!fs.existsSync(p)) return res.status(404).send("placeholder.jpg not found next to server.js");
+  res.type(p);
+  fs.createReadStream(p).pipe(res);
+});
+
+// --- Serve manga cover (library/<manga>/cover.(png|jpg|jpeg|webp|gif)) with fallback ---
+app.get("/cover", (req, res) => {
+  const { manga } = req.query;
+  if (!manga) return res.status(400).send("missing manga");
+
+  let folder;
+  try {
+    folder = safeJoin(LIBRARY_ROOT, manga);
+  } catch {
+    return res.status(400).send("bad path");
+  }
+
+  const exts = [".png", ".jpg", ".jpeg", ".webp", ".gif"];
+  let coverPath = null;
+
+  for (const ext of exts) {
+    const p = path.join(folder, "cover" + ext);
+    if (isFile(p)) {
+      coverPath = p;
+      break;
+    }
+  }
+
+  const fallback = path.join(__dirname, "public", "cover-placeholder.png");
+  const toSend = coverPath ?? fallback;
+
+  if (!isFile(toSend)) return res.status(404).send("no cover + no fallback");
+
+  res.type(toSend);
+  fs.createReadStream(toSend).pipe(res);
+});
+
 app.listen(PORT, () => {
   console.log("Manga reader running at http://localhost:" + PORT);
 });
