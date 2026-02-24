@@ -228,3 +228,42 @@ button {
   text-decoration: none;
   color: inherit;
 }
+
+.cardLink {
+  text-decoration: none;
+  color: inherit;
+  display: block;
+}
+
+.editCoverBtn {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.8rem;
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: none;
+  background: rgba(0,0,0,0.6);
+  color: white;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.mangaCard {
+  position: relative;
+}
+
+.mangaCard:hover .editCoverBtn {
+  opacity: 1;
+}
+
+.hiddenInput {
+  display: none;
+}
+
+.mangaCard.dragging {
+  outline: 3px dashed #666;
+  border-radius: 12px;
+}

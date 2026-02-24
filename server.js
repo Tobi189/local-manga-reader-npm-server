@@ -5,6 +5,8 @@ const path = require("path");
 const app = express();
 const PORT = 5173;
 
+app.use(express.json({ limit: "20mb" }));
+
 // Change this if you want a different folder
 const LIBRARY_ROOT = path.join(__dirname, "library");
 
@@ -174,6 +176,42 @@ app.get("/cover", (req, res) => {
 
   res.type(toSend);
   fs.createReadStream(toSend).pipe(res);
+});
+
+// --- Upload manga cover ---
+app.post("/api/cover", (req, res) => {
+  const { manga, filename, data } = req.body;
+  if (!manga || !filename || !data) {
+    return res.status(400).json({ error: "missing fields" });
+  }
+
+  let folder;
+  try {
+    folder = safeJoin(LIBRARY_ROOT, manga);
+  } catch {
+    return res.status(400).json({ error: "bad path" });
+  }
+
+  if (!isDir(folder)) {
+    return res.status(404).json({ error: "manga not found" });
+  }
+
+  const ext = path.extname(filename).toLowerCase();
+  if (!IMAGE_EXTS.has(ext)) {
+    return res.status(400).json({ error: "unsupported file type" });
+  }
+
+  const base64 = data.replace(/^data:.*;base64,/, "");
+  const buffer = Buffer.from(base64, "base64");
+
+  const targetPath = path.join(folder, "cover" + ext);
+
+  try {
+    fs.writeFileSync(targetPath, buffer);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: "failed to save file" });
+  }
 });
 
 app.listen(PORT, () => {
