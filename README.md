@@ -2,10 +2,30 @@
 
 A minimal local manga reader with:
 
-- Vertical scroll mode
-- Horizontal (RTL spread) mode
-- Responsive library grid with covers
-- Support for multiple cover formats
+- Vertical scroll mode  
+- Horizontal (RTL spread) mode  
+- Responsive library grid  
+- Drag & drop cover uploads  
+- Multiple cover format support  
+- Local progress memory (per manga)
+
+---
+
+## Features
+
+### Reader
+- Vertical scrolling mode
+- Horizontal RTL spread mode
+- Keyboard navigation (Arrow keys)
+- Per-manga last chapter memory
+- Mode persistence (vertical / horizontal)
+
+### Library
+- Responsive cover grid (number of columns adapts to available width — screen size and browser zoom both affect layout)
+- Click cover to open manga
+- Drag & drop image onto a cover to change it
+- Hover → **Change Cover** button
+- Instant refresh after upload (no reload required)
 
 ---
 
@@ -19,7 +39,7 @@ manga-reader/
 ├─ placeholder.jpg                 # used in horizontal (spread) view
 ├─ library/                        # your local manga (ignored by git)
 │  ├─ Berserk/
-│  │  ├─ cover.jpg                 # optional (png/jpg/jpeg/webp/gif supported)
+│  │  ├─ cover.jpg                 # optional
 │  │  └─ 001/
 │  │     ├─ page_1.webp
 │  │     ├─ page_2.webp
@@ -34,18 +54,18 @@ manga-reader/
 │        └─ ...
 └─ public/
    ├─ index.html                   # reader
-   ├─ library.html                 # cover grid page
+   ├─ library.html                 # cover grid
    ├─ app.js
    ├─ library.js
    ├─ style.css
-   └─ cover-placeholder.png        # fallback cover image
+   └─ cover-placeholder.png        # fallback cover
 ```
 
 ---
 
 ## Covers
 
-Each manga folder can optionally contain:
+Each manga folder can contain an optional cover file:
 
 ```
 cover.png
@@ -55,25 +75,36 @@ cover.webp
 cover.gif
 ```
 
-If no cover is found, `public/cover-placeholder.png` is used.
+You can:
+
+- Drag & drop an image onto a cover
+- Or click **Change Cover**
+
+The image will be saved automatically as:
+
+```
+library/<Manga>/cover.<ext>
+```
+
+If no cover exists, `public/cover-placeholder.png` is used.
 
 ---
 
 ## How to Run
 
-1. Install dependencies (once):
+Install dependencies (once):
 
 ```bash
 npm install
 ```
 
-2. Start the server:
+Start the server:
 
 ```bash
 node server.js
 ```
 
-Open in your browser:
+Open:
 
 ```
 http://localhost:5173
@@ -81,7 +112,9 @@ http://localhost:5173
 
 ---
 
-## Pages
+## Routes
 
 - `/` → Reader
-- `/library.html` → Responsive cover grid
+- `/library.html` → Library grid
+- `/cover?manga=Name` → Serve cover image
+- `/api/*` → Backend API endpoints
