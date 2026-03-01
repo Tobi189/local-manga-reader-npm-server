@@ -283,8 +283,15 @@ async function loadChapters() {
   chapterSel.innerHTML = chapters.map(x => `<option>${x}</option>`).join("");
 
   // restore last chapter for this manga (or global fallback)
+ // URL overrides everything: /?manga=...&chapter=...
+  const qs = new URLSearchParams(location.search);
+  const chapterFromUrl = qs.get("chapter");
+
+  // otherwise restore last chapter for this manga (or global fallback)
   const rememberedChapter =
-    (prefs.lastChapterByManga && prefs.lastChapterByManga[manga]) || prefs.chapter;
+    chapterFromUrl ||
+    (prefs.lastChapterByManga && prefs.lastChapterByManga[manga]) ||
+    prefs.chapter;
 
   if (rememberedChapter && chapters.includes(rememberedChapter)) {
     chapterSel.value = rememberedChapter;
