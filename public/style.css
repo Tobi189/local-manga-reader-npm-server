@@ -235,20 +235,27 @@ button {
   display: block;
 }
 
-.editCoverBtn {
+.editCoverBtn{
   position: absolute;
-  bottom: 12px;
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 0.8rem;
-  padding: 4px 8px;
-  border-radius: 6px;
+  top: 10px;
+  right: 10px;
+
+  padding: 6px 8px;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  line-height: 1;
+
   border: none;
-  background: rgba(0,0,0,0.6);
+  background: rgba(0,0,0,0.65);
   color: white;
   cursor: pointer;
+
   opacity: 0;
   transition: opacity 0.15s ease;
+}
+
+.mangaCard:hover .editCoverBtn{
+  opacity: 1;
 }
 
 .mangaCard {
@@ -354,10 +361,3 @@ button {
   opacity: 1;
 }
 
-.linkBtn {
-  position: relative;
-  z-index: 999;
-}
-
-.topbar { z-index: 1000; }
-.viewer { z-index: 1; }
