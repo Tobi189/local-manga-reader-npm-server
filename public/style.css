@@ -267,3 +267,97 @@ button {
   outline: 3px dashed #666;
   border-radius: 12px;
 }
+
+/* Manga Page */
+
+.mangaHeader {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+  margin-top: 20px;
+}
+
+.mangaPageCover {
+  width: 200px;
+  border-radius: 12px;
+  object-fit: cover;
+}
+
+.mangaTitleBlock h1 {
+  margin: 0;
+}
+
+.chapterContainer {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+.chapterList {
+  width: 40%;
+  max-height: 60vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.chapterItem {
+  padding: 10px 14px;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  text-decoration: none;
+  color: inherit;
+}
+
+.chapterItem:hover {
+  background: #f5f5f5;
+}
+
+.continueBtn {
+  display: inline-block;
+  margin: 10px 0 20px 0;
+  padding: 10px 16px;
+  background: #222;
+  color: white;
+  border-radius: 8px;
+  text-decoration: none;
+}
+
+.continueOverlay {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+
+  /* move it up */
+  bottom: 10%;              /* try 8%–13% */
+
+  width: 80%;
+  aspect-ratio: 10 / 3;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: rgba(0, 0, 0, 0.85);
+  color: white;
+  font-weight: 600;
+
+  border-radius: 10px;
+  text-decoration: none;
+
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.mangaCard:hover .continueOverlay {
+  opacity: 1;
+}
+
+.linkBtn {
+  position: relative;
+  z-index: 999;
+}
+
+.topbar { z-index: 1000; }
+.viewer { z-index: 1; }

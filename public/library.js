@@ -5,7 +5,7 @@ function coverUrl(manga) {
 }
 
 function readerUrl(manga) {
-  return `/?manga=${encodeURIComponent(manga)}`;
+  return `/manga.html?manga=${encodeURIComponent(manga)}`;
 }
 
 function uploadCover(manga, file, imgEl) {
@@ -52,6 +52,16 @@ function makeCard(manga) {
   link.appendChild(name);
   card.appendChild(link);
 
+  const prefs = JSON.parse(localStorage.getItem("mangaReaderPrefs:v1") || "{}");
+  const last = prefs.lastChapterByManga?.[manga];
+
+  if (last) {
+    const cont = document.createElement("a");
+    cont.href = `/?manga=${encodeURIComponent(manga)}&chapter=${encodeURIComponent(last)}`;
+    cont.className = "continueOverlay";
+    cont.textContent = "Continue Reading";
+    card.appendChild(cont);
+  }
   // Hidden file input
   const input = document.createElement("input");
   input.type = "file";

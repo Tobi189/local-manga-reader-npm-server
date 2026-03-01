@@ -258,8 +258,22 @@ async function loadManga() {
     mangaSel.value = prefs.manga;
   }
 
+  mangaSel.addEventListener("change", updateBackButton);
+  updateBackButton();
+
   await loadChapters(); // loadChapters will restore chapter
 }
+
+const backBtn = document.getElementById("backToManga");
+
+function updateBackButton() {
+  const manga = mangaSel.value;
+  if (manga) {
+    backBtn.href = `/manga.html?manga=${encodeURIComponent(manga)}`;
+  }
+}
+
+
 
 async function loadChapters() {
   const manga = mangaSel.value;
@@ -282,7 +296,15 @@ async function loadChapters() {
 async function loadPages() {
   const manga = mangaSel.value;
   const chapter = chapterSel.value;
+
+  // persist last opened chapter automatically
+  const prefs = loadPrefs();
+  const lastChapterByManga = { ...(prefs.lastChapterByManga || {}) };
+  lastChapterByManga[mangaSel.value] = chapterSel.value;
+
+  savePrefs({ ...prefs, manga: mangaSel.value, chapter: chapterSel.value, lastChapterByManga });
   pages = await fetch(`/api/pages?manga=${encodeURIComponent(manga)}&chapter=${encodeURIComponent(chapter)}`).then(r => r.json());
+  
   spreadIndex = 0;
   render();
 }
