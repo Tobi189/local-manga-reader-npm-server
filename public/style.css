@@ -361,3 +361,30 @@ button {
   opacity: 1;
 }
 
+.chapterToast {
+  position: fixed;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+
+  background: rgba(0, 0, 0, 0.85);
+  color: white;
+
+  padding: 10px 18px;
+  border-radius: 10px;
+  font-weight: 600;
+
+  opacity: 0;
+  pointer-events: none;
+
+  transition: opacity 0.25s ease;
+  z-index: 9999;
+}
+
+.chapterToast.show {
+  opacity: 1;
+}
+
+.chapterToast.hidden {
+  display: none;
+}

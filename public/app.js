@@ -37,6 +37,24 @@ let chapters = [];
 let pages = [];        // filenames
 let spreadIndex = 0;   // 0..totalSpreads-1
 
+const chapterToast = document.getElementById("chapterToast");
+let toastTimer = null;
+
+function showChapterToast(text) {
+  chapterToast.textContent = text;
+  chapterToast.classList.remove("hidden");
+  chapterToast.classList.add("show");
+
+  if (toastTimer) clearTimeout(toastTimer);
+
+  toastTimer = setTimeout(() => {
+    chapterToast.classList.remove("show");
+    setTimeout(() => {
+      chapterToast.classList.add("hidden");
+    }, 250);
+  }, 2000);
+}
+
 const PLACEHOLDER_URL = "/placeholder.jpg";
 
 function blurActiveIfFormControl() {
@@ -219,20 +237,54 @@ function render() {
   else renderHorizontal();
 }
 
-function forwardSpread() {
+// Move forward one spread, or advance to next chapter if at the last spread
+async function forwardSpread() {
   if (modeSel.value !== "horizontal") return;
+
   const t = totalSpreads();
+
+  // If we still have spreads in this chapter, go forward
   if (spreadIndex < t - 1) {
     spreadIndex++;
     renderHorizontal();
+    return;
+  }
+
+  // At last spread: try to go to next chapter
+  const idx = chapters.indexOf(chapterSel.value);
+  if (idx >= 0 && idx < chapters.length - 1) {
+    chapterSel.value = chapters[idx + 1];
+    await loadPages();       // loadPages resets spreadIndex = 0 and calls render()
+    // ensure we're at the first spread of the new chapter
+    spreadIndex = 0;
+    renderHorizontal();
+  } else {
+    // no next chapter — do nothing (or provide feedback)
   }
 }
 
-function backSpread() {
+// Move back one spread, or go to previous chapter if at the first spread
+async function backSpread() {
   if (modeSel.value !== "horizontal") return;
+
+  // If we are not on the very first spread, just go back
   if (spreadIndex > 0) {
     spreadIndex--;
     renderHorizontal();
+    return;
+  }
+
+  // We're at spreadIndex === 0. Try to move to the previous chapter
+  const idx = chapters.indexOf(chapterSel.value);
+  if (idx > 0) {
+    chapterSel.value = chapters[idx - 1];
+    await loadPages();               // loads pages for previous chapter
+    // jump to the last spread of that previous chapter
+    const tPrev = totalSpreads();
+    spreadIndex = Math.max(0, tPrev - 1);
+    renderHorizontal();
+  } else {
+    // no previous chapter — do nothing
   }
 }
 
@@ -310,6 +362,7 @@ async function loadPages() {
   lastChapterByManga[mangaSel.value] = chapterSel.value;
 
   savePrefs({ ...prefs, manga: mangaSel.value, chapter: chapterSel.value, lastChapterByManga });
+  showChapterToast(`Switched to ${chapter}`);
   pages = await fetch(`/api/pages?manga=${encodeURIComponent(manga)}&chapter=${encodeURIComponent(chapter)}`).then(r => r.json());
   
   spreadIndex = 0;
