@@ -17,7 +17,7 @@ function loadPrefs() {
 }
 
 function readerUrl(chapter) {
-  return `/?manga=${encodeURIComponent(manga)}&chapter=${encodeURIComponent(chapter)}`;
+   return `/index.html?manga=${encodeURIComponent(manga)}&chapter=${encodeURIComponent(chapter)}`;
 }
 
 async function loadChapters() {

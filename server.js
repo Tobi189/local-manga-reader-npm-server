@@ -58,7 +58,7 @@ function sortPages(files) {
 }
 
 // --- Serve frontend ---
-app.use(express.static(path.join(__dirname, "public")));
+app.use(express.static(path.join(__dirname, "public"), { index: "library.html" }));
 
 // --- API: list manga (folders under library) ---
 app.get("/api/manga", (req, res) => {

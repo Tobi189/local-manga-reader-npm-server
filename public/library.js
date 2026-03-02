@@ -57,8 +57,7 @@ function makeCard(manga) {
 
   if (last) {
     const cont = document.createElement("a");
-    cont.href = `/?manga=${encodeURIComponent(manga)}&chapter=${encodeURIComponent(last)}`;
-    cont.className = "continueOverlay";
+    cont.href = `/index.html?manga=${encodeURIComponent(manga)}&chapter=${encodeURIComponent(last)}`;    cont.className = "continueOverlay";
     cont.textContent = "Continue Reading";
     card.appendChild(cont);
   }
