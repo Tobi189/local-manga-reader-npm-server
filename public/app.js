@@ -1,201 +1,152 @@
-const mangaSel = document.getElementById("manga");
-const chapterSel = document.getElementById("chapter");
-const modeSel = document.getElementById("mode");
+const el = (id) => document.getElementById(id);
 
-const prevChapterBtn = document.getElementById("prevChapter");
-const nextChapterBtn = document.getElementById("nextChapter");
+const mangaSel = el("manga");
+const chapterSel = el("chapter");
+const modeSel = el("mode");
 
-const pagesDiv = document.getElementById("pages");
-const pageInfo = document.getElementById("pageInfo");
+const prevChapterBtn = el("prevChapter");
+const nextChapterBtn = el("nextChapter");
 
-const navLeft = document.getElementById("navLeft");
-const navRight = document.getElementById("navRight");
-const btnLeft = document.getElementById("btnLeft");   // forward
-const btnRight = document.getElementById("btnRight"); // back
+const pagesDiv = el("pages");
+const pageInfo = el("pageInfo");
 
-const pageIndicator = document.getElementById("pageIndicator");
+const navLeft = el("navLeft");
+const navRight = el("navRight");
+const btnLeft = el("btnLeft");   // forward (RTL)
+const btnRight = el("btnRight"); // back (RTL)
 
-const LS_KEY = "mangaReaderPrefs:v1";
-
-function loadPrefs() {
-  try { return JSON.parse(localStorage.getItem(LS_KEY) || "{}"); }
-  catch { return {}; }
-}
-
-function savePrefs(prefs) {
-  localStorage.setItem(LS_KEY, JSON.stringify(prefs));
-}
-
-function updatePrefs(patch) {
-  const prefs = loadPrefs();
-  const next = { ...prefs, ...patch };
-  savePrefs(next);
-  return next;
-}
-
-let chapters = [];
-let pages = [];        // filenames
-let spreadIndex = 0;   // 0..totalSpreads-1
-
-const chapterToast = document.getElementById("chapterToast");
-let toastTimer = null;
-
-function showChapterToast(text) {
-  chapterToast.textContent = text;
-  chapterToast.classList.remove("hidden");
-  chapterToast.classList.add("show");
-
-  if (toastTimer) clearTimeout(toastTimer);
-
-  toastTimer = setTimeout(() => {
-    chapterToast.classList.remove("show");
-    setTimeout(() => {
-      chapterToast.classList.add("hidden");
-    }, 250);
-  }, 2000);
-}
+const pageIndicator = el("pageIndicator");
+const backBtn = el("backToManga");
+const chapterToast = el("chapterToast");
 
 const PLACEHOLDER_URL = "/placeholder.jpg";
 
-function blurActiveIfFormControl() {
-  const el = document.activeElement;
-  if (!el) return;
-  const tag = el.tagName?.toLowerCase();
-  if (tag === "select" || tag === "input" || tag === "textarea" || tag === "button") {
-    el.blur();
-  }
+let prefs = null;        // global shared prefs loaded from server
+let chapters = [];
+let pages = [];
+let spreadIndex = 0;
+let toastTimer = null;
+
+async function apiJson(url, opts) {
+  const r = await fetch(url, opts);
+  if (!r.ok) throw new Error(`${r.status} ${url}`);
+  return await r.json();
+}
+
+async function loadPrefs() {
+  return await apiJson("/api/prefs");
+}
+
+async function savePrefs(next) {
+  prefs = next;
+  await apiJson("/api/prefs", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(next)
+  });
 }
 
 function imgUrl(manga, chapter, file) {
   return `/img?manga=${encodeURIComponent(manga)}&chapter=${encodeURIComponent(chapter)}&file=${encodeURIComponent(file)}`;
 }
 
-function buildImg(src) {
-  const img = document.createElement("img");
-  img.loading = "lazy";
-  img.src = src;
-  return img;
+function setNavVisible(on) {
+  navLeft.classList.toggle("hidden", !on);
+  navRight.classList.toggle("hidden", !on);
+}
+
+function showToast(text) {
+  chapterToast.textContent = text;
+  chapterToast.classList.remove("hidden");
+  chapterToast.classList.add("show");
+
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => {
+    chapterToast.classList.remove("show");
+    setTimeout(() => chapterToast.classList.add("hidden"), 250);
+  }, 1600);
+}
+
+function updateBackLink() {
+  const manga = mangaSel.value;
+  backBtn.href = manga ? `/manga.html?manga=${encodeURIComponent(manga)}` : "/library.html";
 }
 
 function totalSpreads() {
-  // Spread 0: placeholder + page0 (single real page)
-  // Remaining pages from index 1 onward in pairs (right then left)
   if (pages.length === 0) return 0;
   if (pages.length === 1) return 1;
   return 1 + Math.ceil((pages.length - 1) / 2);
 }
 
-/**
- * Returns [leftSrc, rightSrc] for a spread index, JP style:
- * spread 0: left=first page, right=placeholder
- * spread 1: right=page1, left=page2 (if exists else placeholder)
- * spread 2: right=page3, left=page4 ...
- */
 function spreadSources(si) {
   const manga = mangaSel.value;
   const chapter = chapterSel.value;
 
   if (pages.length === 0) return [PLACEHOLDER_URL, PLACEHOLDER_URL];
-
-  // Spread 0: show first real page on the LEFT, placeholder on the RIGHT
-  if (si === 0) {
-    const left = imgUrl(manga, chapter, pages[0]);
-    return [left, PLACEHOLDER_URL];
-  }
+  if (si === 0) return [imgUrl(manga, chapter, pages[0]), PLACEHOLDER_URL];
 
   const start = 1 + (si - 1) * 2;
-  const rightIdx = start;      // earlier page (RTL: goes on the RIGHT when we have two)
-  const leftIdx = start + 1;   // later page (goes on the LEFT)
+  const rightIdx = start;
+  const leftIdx = start + 1;
 
-  // If only one page is left (your “last single page” case),
-  // show that page on LEFT and placeholder on RIGHT.
   if (rightIdx < pages.length && leftIdx >= pages.length) {
-    const right = imgUrl(manga, chapter, pages[rightIdx]);
-    return [PLACEHOLDER_URL, right];
+    return [PLACEHOLDER_URL, imgUrl(manga, chapter, pages[rightIdx])];
   }
 
-  // Normal two-page spread (RTL reading):
+  const left = leftIdx < pages.length ? imgUrl(manga, chapter, pages[leftIdx]) : PLACEHOLDER_URL;
   const right = rightIdx < pages.length ? imgUrl(manga, chapter, pages[rightIdx]) : PLACEHOLDER_URL;
-  const left  = leftIdx  < pages.length ? imgUrl(manga, chapter, pages[leftIdx])  : PLACEHOLDER_URL;
-
   return [left, right];
 }
 
-function setNavVisible(visible) {
-  navLeft.classList.toggle("hidden", !visible);
-  navRight.classList.toggle("hidden", !visible);
+function spreadPageNumbers(si) {
+  if (pages.length === 0) return [];
+  if (si === 0) return [1];
+
+  const start = 1 + (si - 1) * 2;
+  const rightIdx = start;
+  const leftIdx = start + 1;
+
+  if (rightIdx >= pages.length) return [];
+  if (leftIdx >= pages.length) return [rightIdx + 1];
+  return [rightIdx + 1, leftIdx + 1];
 }
 
-function updateInfo() {
-  if (modeSel.value !== "horizontal") {
+function updateIndicators() {
+  if (modeSel.value !== "horizontal" || pages.length === 0) {
     pageInfo.textContent = "";
+    pageIndicator.classList.add("hidden");
+    pageIndicator.textContent = "";
     return;
   }
-  const t = totalSpreads();
-  if (t === 0) { pageInfo.textContent = ""; return; }
 
-  // show “spread x/y”
+  const t = totalSpreads();
   pageInfo.textContent = `Spread ${spreadIndex + 1}/${t} (RTL)`;
+
+  const nums = spreadPageNumbers(spreadIndex);
+  pageIndicator.classList.remove("hidden");
+  pageIndicator.textContent =
+    nums.length === 1
+      ? `Page ${nums[0]} / ${pages.length}`
+      : `Pages ${nums[0]}–${nums[1]} / ${pages.length}`;
 }
 
 function renderVertical() {
   pagesDiv.className = "vertical";
   pagesDiv.innerHTML = "";
   setNavVisible(false);
-  pageInfo.textContent = "";
 
   const manga = mangaSel.value;
   const chapter = chapterSel.value;
 
   for (const file of pages) {
-    pagesDiv.appendChild(buildImg(imgUrl(manga, chapter, file)));
+    const img = document.createElement("img");
+    img.loading = "lazy";
+    img.src = imgUrl(manga, chapter, file);
+    pagesDiv.appendChild(img);
   }
+
+  updateIndicators();
   window.scrollTo({ top: 0, behavior: "instant" });
-  updateBottomIndicator();
-}
-
-function spreadPageNumbers(si) {
-  // Returns 1-based real page numbers in reading order (RTL: right page first)
-  // spread 0: [1]
-  // spread 1: [2,3]
-  // spread 2: [4,5]
-  // last single: [N]
-  if (pages.length === 0) return [];
-
-  if (si === 0) return [1];
-
-  const start = 1 + (si - 1) * 2;     // 0-based index of the "right" page
-  const rightIdx = start;
-  const leftIdx = start + 1;
-
-  if (rightIdx >= pages.length) return [];
-
-  const rightPage = rightIdx + 1;     // to 1-based
-  const leftPage = leftIdx + 1;
-
-  // If only one page remains (last single spread)
-  if (leftIdx >= pages.length) return [rightPage];
-
-  return [rightPage, leftPage];
-}
-
-function updateBottomIndicator() {
-  if (modeSel.value !== "horizontal" || pages.length === 0) {
-    pageIndicator.classList.add("hidden");
-    pageIndicator.textContent = "";
-    return;
-  }
-
-  pageIndicator.classList.remove("hidden");
-
-  const total = pages.length;
-  const nums = spreadPageNumbers(spreadIndex);
-
-  if (nums.length === 1) {
-    pageIndicator.textContent = `Page ${nums[0]} / ${total}`;
-  } else {
-    pageIndicator.textContent = `Pages ${nums[0]}–${nums[1]} / ${total}`;
-  }
 }
 
 function renderHorizontal() {
@@ -214,140 +165,64 @@ function renderHorizontal() {
 
   const [leftSrc, rightSrc] = spreadSources(spreadIndex);
 
-  leftSlot.appendChild(buildImg(leftSrc));
-  rightSlot.appendChild(buildImg(rightSrc));
+  const leftImg = document.createElement("img");
+  leftImg.loading = "lazy";
+  leftImg.src = leftSrc;
+
+  const rightImg = document.createElement("img");
+  rightImg.loading = "lazy";
+  rightImg.src = rightSrc;
+
+  leftSlot.appendChild(leftImg);
+  rightSlot.appendChild(rightImg);
 
   frame.appendChild(leftSlot);
   frame.appendChild(rightSlot);
   pagesDiv.appendChild(frame);
 
-  updateInfo();
-  updateBottomIndicator();
-
+  updateIndicators();
   window.scrollTo({ top: 0, behavior: "instant" });
 }
 
 function render() {
-  const mode = modeSel.value;
   const t = totalSpreads();
   if (spreadIndex < 0) spreadIndex = 0;
   if (t > 0 && spreadIndex > t - 1) spreadIndex = t - 1;
 
-  if (mode === "vertical") renderVertical();
+  if (modeSel.value === "vertical") renderVertical();
   else renderHorizontal();
 }
 
-// Move forward one spread, or advance to next chapter if at the last spread
-async function forwardSpread() {
-  if (modeSel.value !== "horizontal") return;
+async function loadMangaList() {
+  const all = await apiJson("/api/manga");
+  mangaSel.innerHTML = all.map((x) => `<option>${x}</option>`).join("");
 
-  const t = totalSpreads();
-
-  // If we still have spreads in this chapter, go forward
-  if (spreadIndex < t - 1) {
-    spreadIndex++;
-    renderHorizontal();
-    return;
-  }
-
-  // At last spread: try to go to next chapter
-  const idx = chapters.indexOf(chapterSel.value);
-  if (idx >= 0 && idx < chapters.length - 1) {
-    chapterSel.value = chapters[idx + 1];
-    await loadPages();       // loadPages resets spreadIndex = 0 and calls render()
-    // ensure we're at the first spread of the new chapter
-    spreadIndex = 0;
-    renderHorizontal();
-  } else {
-    // no next chapter — do nothing (or provide feedback)
-  }
-}
-
-// Move back one spread, or go to previous chapter if at the first spread
-async function backSpread() {
-  if (modeSel.value !== "horizontal") return;
-
-  // If we are not on the very first spread, just go back
-  if (spreadIndex > 0) {
-    spreadIndex--;
-    renderHorizontal();
-    return;
-  }
-
-  // We're at spreadIndex === 0. Try to move to the previous chapter
-  const idx = chapters.indexOf(chapterSel.value);
-  if (idx > 0) {
-    chapterSel.value = chapters[idx - 1];
-    await loadPages();               // loads pages for previous chapter
-    // jump to the last spread of that previous chapter
-    const tPrev = totalSpreads();
-    spreadIndex = Math.max(0, tPrev - 1);
-    renderHorizontal();
-  } else {
-    // no previous chapter — do nothing
-  }
-}
-
-// --- Data loading ---
-async function loadManga() {
-  const prefs = loadPrefs();
-
-  // restore mode first (so UI shows right)
-  if (prefs.mode) modeSel.value = prefs.mode;
-
-  const m = await fetch("/api/manga").then(r => r.json());
-  mangaSel.innerHTML = m.map(x => `<option>${x}</option>`).join("");
-
-  // allow deep-link: /?manga=NAME
   const qs = new URLSearchParams(location.search);
   const mangaFromUrl = qs.get("manga");
 
-  if (mangaFromUrl && m.includes(mangaFromUrl)) {
-    mangaSel.value = mangaFromUrl;
-    updatePrefs({ manga: mangaFromUrl });
-  } else if (prefs.manga && m.includes(prefs.manga)) {
-    // restore manga from prefs if still exists
-    mangaSel.value = prefs.manga;
-  }
+  if (mangaFromUrl && all.includes(mangaFromUrl)) mangaSel.value = mangaFromUrl;
+  else if (prefs?.manga && all.includes(prefs.manga)) mangaSel.value = prefs.manga;
+  else if (all.length) mangaSel.value = all[0];
 
-  mangaSel.addEventListener("change", updateBackButton);
-  updateBackButton();
-
-  await loadChapters(); // loadChapters will restore chapter
+  updateBackLink();
+  await loadChapters();
 }
-
-const backBtn = document.getElementById("backToManga");
-
-function updateBackButton() {
-  const manga = mangaSel.value;
-  if (manga) {
-    backBtn.href = `/manga.html?manga=${encodeURIComponent(manga)}`;
-  }
-}
-
-
 
 async function loadChapters() {
   const manga = mangaSel.value;
-  const prefs = loadPrefs();
+  chapters = await apiJson(`/api/chapters?manga=${encodeURIComponent(manga)}`);
+  chapterSel.innerHTML = chapters.map((x) => `<option>${x}</option>`).join("");
 
-  chapters = await fetch(`/api/chapters?manga=${encodeURIComponent(manga)}`).then(r => r.json());
-  chapterSel.innerHTML = chapters.map(x => `<option>${x}</option>`).join("");
-
-  // restore last chapter for this manga (or global fallback)
- // URL overrides everything: /?manga=...&chapter=...
   const qs = new URLSearchParams(location.search);
   const chapterFromUrl = qs.get("chapter");
 
-  // otherwise restore last chapter for this manga (or global fallback)
-  const rememberedChapter =
+  const remembered =
     chapterFromUrl ||
-    (prefs.lastChapterByManga && prefs.lastChapterByManga[manga]) ||
-    prefs.chapter;
+    prefs?.lastChapterByManga?.[manga] ||
+    prefs?.chapter;
 
-  if (rememberedChapter && chapters.includes(rememberedChapter)) {
-    chapterSel.value = rememberedChapter;
-  }
+  if (remembered && chapters.includes(remembered)) chapterSel.value = remembered;
+  else if (chapters.length) chapterSel.value = chapters[0];
 
   await loadPages();
 }
@@ -356,84 +231,109 @@ async function loadPages() {
   const manga = mangaSel.value;
   const chapter = chapterSel.value;
 
-  // persist last opened chapter automatically
-  const prefs = loadPrefs();
-  const lastChapterByManga = { ...(prefs.lastChapterByManga || {}) };
-  lastChapterByManga[mangaSel.value] = chapterSel.value;
+  // ✅ update global shared state in JSON
+  const lastChapterByManga = { ...(prefs?.lastChapterByManga || {}) };
+  lastChapterByManga[manga] = chapter;
 
-  savePrefs({ ...prefs, manga: mangaSel.value, chapter: chapterSel.value, lastChapterByManga });
-  showChapterToast(`Switched to ${chapter}`);
-  pages = await fetch(`/api/pages?manga=${encodeURIComponent(manga)}&chapter=${encodeURIComponent(chapter)}`).then(r => r.json());
-  
+  await savePrefs({
+  mode: modeSel.value === "horizontal" ? "horizontal" : "vertical",
+  manga,
+  chapter,
+  lastChapterByManga,
+  lastOpened: { manga, chapter, at: new Date().toISOString() }
+});
+
+  pages = await apiJson(`/api/pages?manga=${encodeURIComponent(manga)}&chapter=${encodeURIComponent(chapter)}`);
+
   spreadIndex = 0;
+  showToast(`Switched to ${chapter}`);
   render();
 }
 
-// --- Events ---
+async function goNextSpreadOrChapter() {
+  if (modeSel.value !== "horizontal") return;
 
-// When manga changes: remember selection + reload chapters
-mangaSel.addEventListener("change", async () => {
-  updatePrefs({ manga: mangaSel.value });
-  await loadChapters();
-  blurActiveIfFormControl();
-});
+  const t = totalSpreads();
+  if (t === 0) return;
 
-// When chapter changes: remember per-manga chapter + reload pages
-chapterSel.addEventListener("change", async () => {
-  const manga = mangaSel.value;
-  const chapter = chapterSel.value;
-
-  const prefs = loadPrefs();
-  const lastChapterByManga = { ...(prefs.lastChapterByManga || {}) };
-  lastChapterByManga[manga] = chapter;
-
-  savePrefs({ ...prefs, manga, chapter, lastChapterByManga });
-
-  await loadPages();
-  blurActiveIfFormControl();
-});
-
-// Mode change: remember + re-render
-modeSel.addEventListener("change", () => {
-  updatePrefs({ mode: modeSel.value });
-  spreadIndex = 0;
-  render();
-  blurActiveIfFormControl();
-});
-
-// Chapter nav
-prevChapterBtn.addEventListener("click", () => {
-  const idx = chapters.indexOf(chapterSel.value);
-  if (idx > 0) {
-    chapterSel.value = chapters[idx - 1];
-    loadPages();
+  if (spreadIndex < t - 1) {
+    spreadIndex++;
+    render();
+    return;
   }
-});
 
-nextChapterBtn.addEventListener("click", () => {
   const idx = chapters.indexOf(chapterSel.value);
   if (idx >= 0 && idx < chapters.length - 1) {
     chapterSel.value = chapters[idx + 1];
-    loadPages();
+    await loadPages();
+  }
+}
+
+async function goPrevSpreadOrChapter() {
+  if (modeSel.value !== "horizontal") return;
+  if (totalSpreads() === 0) return;
+
+  if (spreadIndex > 0) {
+    spreadIndex--;
+    render();
+    return;
+  }
+
+  const idx = chapters.indexOf(chapterSel.value);
+  if (idx > 0) {
+    chapterSel.value = chapters[idx - 1];
+    await loadPages();
+    spreadIndex = Math.max(0, totalSpreads() - 1);
+    render();
+  }
+}
+
+mangaSel.addEventListener("change", async () => {
+  updateBackLink();
+  await loadChapters();
+});
+
+chapterSel.addEventListener("change", async () => {
+  await loadPages();
+});
+
+modeSel.addEventListener("change", async () => {
+  await savePrefs({ ...prefs, mode: modeSel.value === "horizontal" ? "horizontal" : "vertical" });
+  spreadIndex = 0;
+  render();
+});
+
+prevChapterBtn.addEventListener("click", async () => {
+  const idx = chapters.indexOf(chapterSel.value);
+  if (idx > 0) {
+    chapterSel.value = chapters[idx - 1];
+    await loadPages();
   }
 });
 
-// Hover nav (RTL friendly)
-btnLeft.addEventListener("click", forwardSpread); // go forward (next)
-btnRight.addEventListener("click", backSpread);   // go back (prev)
+nextChapterBtn.addEventListener("click", async () => {
+  const idx = chapters.indexOf(chapterSel.value);
+  if (idx >= 0 && idx < chapters.length - 1) {
+    chapterSel.value = chapters[idx + 1];
+    await loadPages();
+  }
+});
 
-// Keyboard:
-// - Left = forward (RTL)
-// - Right = back
-// - Shift+Left/Right = chapter
+btnLeft.addEventListener("click", goNextSpreadOrChapter);
+btnRight.addEventListener("click", goPrevSpreadOrChapter);
+
 window.addEventListener("keydown", (e) => {
   if (e.shiftKey && e.key === "ArrowLeft") prevChapterBtn.click();
   if (e.shiftKey && e.key === "ArrowRight") nextChapterBtn.click();
 
-  if (!e.shiftKey && modeSel.value === "horizontal") {
-    if (e.key === "ArrowLeft") forwardSpread();
-    if (e.key === "ArrowRight") backSpread();
-  }
+  if (modeSel.value !== "horizontal") return;
+
+  if (e.key === "ArrowLeft") { goNextSpreadOrChapter(); e.preventDefault(); }
+  if (e.key === "ArrowRight") { goPrevSpreadOrChapter(); e.preventDefault(); }
 });
 
-loadManga();
+(async function init() {
+  prefs = await loadPrefs();
+  modeSel.value = prefs.mode === "horizontal" ? "horizontal" : "vertical";
+  await loadMangaList();
+})();

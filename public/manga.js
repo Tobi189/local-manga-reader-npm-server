@@ -8,37 +8,26 @@ const continueWrap = document.getElementById("continueWrap");
 
 if (!manga) location.href = "/library.html";
 
-titleEl.textContent = manga;
-coverImg.src = `/cover?manga=${encodeURIComponent(manga)}&t=${Date.now()}`;
-
-function loadPrefs() {
-  try { return JSON.parse(localStorage.getItem("mangaReaderPrefs:v1") || "{}"); }
-  catch { return {}; }
+async function apiJson(url, opts) {
+  const r = await fetch(url, opts);
+  if (!r.ok) throw new Error(`${r.status} ${url}`);
+  return await r.json();
 }
 
 function readerUrl(chapter) {
-   return `/index.html?manga=${encodeURIComponent(manga)}&chapter=${encodeURIComponent(chapter)}`;
+  return `/index.html?manga=${encodeURIComponent(manga)}&chapter=${encodeURIComponent(chapter)}`;
 }
 
-async function loadChapters() {
-  const chapters = await fetch(`/api/chapters?manga=${encodeURIComponent(manga)}`)
-    .then(r => r.json());
+(async function init() {
+  titleEl.textContent = manga;
+  coverImg.src = `/cover?manga=${encodeURIComponent(manga)}&t=${Date.now()}`;
 
-  const reversed = [...chapters].reverse(); // latest first
-
-  chapterList.innerHTML = "";
-
-  for (const ch of reversed) {
-    const a = document.createElement("a");
-    a.href = readerUrl(ch);
-    a.className = "chapterItem";
-    a.textContent = ch;
-    chapterList.appendChild(a);
-  }
-
-  const prefs = loadPrefs();
+  const chapters = await apiJson(`/api/chapters?manga=${encodeURIComponent(manga)}`);
+  const prefs = await apiJson("/api/prefs");
   const last = prefs.lastChapterByManga?.[manga];
 
+  // Continue button
+  continueWrap.innerHTML = "";
   if (last && chapters.includes(last)) {
     const btn = document.createElement("a");
     btn.href = readerUrl(last);
@@ -46,6 +35,14 @@ async function loadChapters() {
     btn.textContent = `Continue Reading (${last})`;
     continueWrap.appendChild(btn);
   }
-}
 
-loadChapters();
+  // Chapter list (newest first)
+  chapterList.innerHTML = "";
+  [...chapters].reverse().forEach((ch) => {
+    const a = document.createElement("a");
+    a.href = readerUrl(ch);
+    a.className = "chapterItem";
+    a.textContent = ch;
+    chapterList.appendChild(a);
+  });
+})();

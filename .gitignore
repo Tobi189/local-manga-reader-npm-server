@@ -43,3 +43,5 @@ Desktop.ini
 
 # --- optional: if you ever use TypeScript ---
 *.tsbuildinfo
+
+data/

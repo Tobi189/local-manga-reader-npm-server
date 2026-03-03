@@ -1,27 +1,27 @@
 const grid = document.getElementById("libraryGrid");
+const continueTop = document.getElementById("continueTop");
+
+let lastChapterByManga = {};
+
+async function apiJson(url, opts) {
+  const r = await fetch(url, opts);
+  if (!r.ok) throw new Error(`${r.status} ${url}`);
+  return await r.json();
+}
 
 function coverUrl(manga) {
   return `/cover?manga=${encodeURIComponent(manga)}&t=${Date.now()}`;
 }
 
-function readerUrl(manga) {
-  return `/manga.html?manga=${encodeURIComponent(manga)}`;
-}
-
 function uploadCover(manga, file, imgEl) {
   const reader = new FileReader();
   reader.onload = async () => {
-    await fetch("/api/cover", {
+    await apiJson("/api/cover", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        manga,
-        filename: file.name,
-        data: reader.result
-      })
+      body: JSON.stringify({ manga, filename: file.name, data: reader.result })
     });
-
-    imgEl.src = coverUrl(manga); // refresh with cache bust
+    imgEl.src = coverUrl(manga);
   };
   reader.readAsDataURL(file);
 }
@@ -31,7 +31,7 @@ function makeCard(manga) {
   card.className = "mangaCard";
 
   const link = document.createElement("a");
-  link.href = readerUrl(manga);
+  link.href = `/manga.html?manga=${encodeURIComponent(manga)}`;
   link.className = "cardLink";
 
   const img = document.createElement("img");
@@ -39,10 +39,7 @@ function makeCard(manga) {
   img.src = coverUrl(manga);
   img.alt = manga;
   img.loading = "lazy";
-
-  img.onerror = () => {
-    img.src = "/cover-placeholder.png";
-  };
+  img.onerror = () => (img.src = "/cover-placeholder.png");
 
   const name = document.createElement("div");
   name.className = "mangaName";
@@ -52,51 +49,43 @@ function makeCard(manga) {
   link.appendChild(name);
   card.appendChild(link);
 
-  const prefs = JSON.parse(localStorage.getItem("mangaReaderPrefs:v1") || "{}");
-  const last = prefs.lastChapterByManga?.[manga];
-
+  const last = lastChapterByManga?.[manga];
   if (last) {
     const cont = document.createElement("a");
-    cont.href = `/index.html?manga=${encodeURIComponent(manga)}&chapter=${encodeURIComponent(last)}`;    cont.className = "continueOverlay";
+    cont.href = `/index.html?manga=${encodeURIComponent(manga)}&chapter=${encodeURIComponent(last)}`;
+    cont.className = "continueOverlay";
     cont.textContent = "Continue Reading";
     card.appendChild(cont);
   }
-  // Hidden file input
+
   const input = document.createElement("input");
   input.type = "file";
   input.accept = "image/*";
   input.className = "hiddenInput";
-  input.addEventListener("change", e => {
-    if (e.target.files[0]) {
-      uploadCover(manga, e.target.files[0], img);
-    }
+  input.addEventListener("change", (e) => {
+    const f = e.target.files?.[0];
+    if (f) uploadCover(manga, f, img);
   });
 
-  // Change cover button
   const editBtn = document.createElement("button");
   editBtn.className = "editCoverBtn";
   editBtn.textContent = "Change Cover";
-  editBtn.onclick = (e) => {
-    e.stopPropagation();
+  editBtn.addEventListener("click", (e) => {
     e.preventDefault();
+    e.stopPropagation();
     input.click();
-  };
+  });
 
-  // Drag & drop
-  card.addEventListener("dragover", e => {
+  card.addEventListener("dragover", (e) => {
     e.preventDefault();
     card.classList.add("dragging");
   });
-
-  card.addEventListener("dragleave", () => {
-    card.classList.remove("dragging");
-  });
-
-  card.addEventListener("drop", e => {
+  card.addEventListener("dragleave", () => card.classList.remove("dragging"));
+  card.addEventListener("drop", (e) => {
     e.preventDefault();
     card.classList.remove("dragging");
-    const file = e.dataTransfer.files[0];
-    if (file) uploadCover(manga, file, img);
+    const f = e.dataTransfer.files?.[0];
+    if (f) uploadCover(manga, f, img);
   });
 
   card.appendChild(editBtn);
@@ -105,10 +94,23 @@ function makeCard(manga) {
   return card;
 }
 
-async function loadLibrary() {
-  const mangas = await fetch("/api/manga").then(r => r.json());
-  grid.innerHTML = "";
-  mangas.forEach(m => grid.appendChild(makeCard(m)));
-}
+(async function init() {
+  const prefs = await apiJson("/api/prefs");
+  lastChapterByManga = prefs.lastChapterByManga || {};
 
-loadLibrary();
+  // Top continue button (global)
+  if (continueTop) {
+    const lo = prefs.lastOpened;
+    if (lo && lo.manga && lo.chapter) {
+      continueTop.classList.remove("hidden");
+      continueTop.href = `/index.html?manga=${encodeURIComponent(lo.manga)}&chapter=${encodeURIComponent(lo.chapter)}`;
+      continueTop.textContent = `Continue Reading: ${lo.manga} — ${lo.chapter}`;
+    } else {
+      continueTop.classList.add("hidden");
+    }
+  }
+
+  const mangas = await apiJson("/api/manga");
+  grid.innerHTML = "";
+  mangas.forEach((m) => grid.appendChild(makeCard(m)));
+})();
