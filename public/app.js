@@ -10,6 +10,7 @@ const nextChapterBtn = el("nextChapter");
 const pagesDiv = el("pages");
 const pageInfo = el("pageInfo");
 
+const downloadSpreadBtn = el("downloadSpread");
 const navLeft = el("navLeft");
 const navRight = el("navRight");
 const btnLeft = el("btnLeft");   // forward (RTL)
@@ -26,6 +27,81 @@ let chapters = [];
 let pages = [];
 let spreadIndex = 0;
 let toastTimer = null;
+
+function waitImageLoaded(img) {
+  return new Promise((resolve, reject) => {
+    if (!img) return reject(new Error("No image element"));
+    if (img.complete && img.naturalWidth > 0) return resolve();
+    img.addEventListener("load", () => resolve(), { once: true });
+    img.addEventListener("error", () => reject(new Error("Image failed to load")), { once: true });
+  });
+}
+
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+function sanitizeFilename(s) {
+  return String(s).replace(/[\\/:*?"<>|]+/g, "_").trim();
+}
+
+async function downloadCurrentSpread() {
+  if (modeSel.value !== "horizontal") return;
+
+  const frame = pagesDiv.querySelector(".spreadFrame");
+  if (!frame) return;
+
+  const imgs = frame.querySelectorAll("img");
+  if (imgs.length !== 2) return;
+
+  const leftImgEl = imgs[0];
+  const rightImgEl = imgs[1];
+
+  // Ensure they are loaded (or placeholder)
+  await Promise.allSettled([waitImageLoaded(leftImgEl), waitImageLoaded(rightImgEl)]);
+
+  // Use natural sizes. If placeholder is used, it still has a natural size.
+  const lw = leftImgEl.naturalWidth || 1;
+  const lh = leftImgEl.naturalHeight || 1;
+  const rw = rightImgEl.naturalWidth || 1;
+  const rh = rightImgEl.naturalHeight || 1;
+
+  // Combine side-by-side (left then right, matching what you see)
+  const outW = lw + rw;
+  const outH = Math.max(lh, rh);
+
+  const canvas = document.createElement("canvas");
+  canvas.width = outW;
+  canvas.height = outH;
+  const ctx = canvas.getContext("2d");
+
+  // White background (so transparent PNGs look nice)
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(0, 0, outW, outH);
+
+  // Center vertically if heights differ
+  const ly = Math.floor((outH - lh) / 2);
+  const ry = Math.floor((outH - rh) / 2);
+
+  ctx.drawImage(leftImgEl, 0, ly, lw, lh);
+  ctx.drawImage(rightImgEl, lw, ry, rw, rh);
+
+  const manga = sanitizeFilename(mangaSel.value);
+  const chapter = sanitizeFilename(chapterSel.value);
+  const spreadNum = spreadIndex + 1;
+
+  canvas.toBlob((blob) => {
+    if (!blob) return;
+    downloadBlob(blob, `${manga}__${chapter}__spread-${spreadNum}.png`);
+  }, "image/png");
+}
 
 async function apiJson(url, opts) {
   const r = await fetch(url, opts);
@@ -118,6 +194,10 @@ function updateIndicators() {
     pageIndicator.textContent = "";
     return;
   }
+
+  if (downloadSpreadBtn) {
+  downloadSpreadBtn.classList.toggle("hidden", modeSel.value !== "horizontal" || pages.length === 0);
+}
 
   const t = totalSpreads();
   pageInfo.textContent = `Spread ${spreadIndex + 1}/${t} (RTL)`;
@@ -286,6 +366,10 @@ async function goPrevSpreadOrChapter() {
     spreadIndex = Math.max(0, totalSpreads() - 1);
     render();
   }
+}
+
+if (downloadSpreadBtn) {
+  downloadSpreadBtn.addEventListener("click", downloadCurrentSpread);
 }
 
 mangaSel.addEventListener("change", async () => {
