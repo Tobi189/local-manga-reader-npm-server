@@ -19,13 +19,37 @@ A minimal local manga reader with:
 - Keyboard navigation (Arrow keys)
 - Per-manga last chapter memory
 - Mode persistence (vertical / horizontal)
+- Download current spread in horizontal mode
+- Chapter switching with toast notification
 
 ### Library
 - Responsive cover grid (number of columns adapts to available width — screen size and browser zoom both affect layout)
 - Click cover to open manga
+- Continue reading button
 - Drag & drop image onto a cover to change it
 - Hover → **Change Cover** button
 - Instant refresh after upload (no reload required)
+
+### Manga page
+- Dedicated manga page with cover and chapter list
+- Continue reading button for the last opened chapter
+- Chapter list shown newest first
+
+---
+
+## Screenshots
+
+### Library
+![Library](./screenshots/library.png)
+
+### Manga page
+![Manga page](./screenshots/manga-page.png)
+
+### Reader - Vertical mode
+![Reader vertical](./screenshots/reader-vertical.png)
+
+### Reader - Horizontal mode
+![Reader horizontal](./screenshots/reader-horizontal.png)
 
 ---
 
@@ -37,7 +61,10 @@ manga-reader/
 ├─ package.json
 ├─ package-lock.json
 ├─ placeholder.jpg                 # used in horizontal (spread) view
-├─ library/                        # your local manga (ignored by git)
+├─ README.md
+├─ data/
+│  └─ state.json                   # saved reading state and preferences
+├─ library/                        # local manga library
 │  ├─ Berserk/
 │  │  ├─ cover.jpg                 # optional
 │  │  └─ 001/
@@ -54,9 +81,11 @@ manga-reader/
 │        └─ ...
 └─ public/
    ├─ index.html                   # reader
-   ├─ library.html                 # cover grid
+   ├─ library.html                 # library grid
+   ├─ manga.html                   # manga details page
    ├─ app.js
    ├─ library.js
+   ├─ manga.js
    ├─ style.css
    └─ cover-placeholder.png        # fallback cover
 ```
@@ -67,7 +96,7 @@ manga-reader/
 
 Each manga folder can contain an optional cover file:
 
-```
+```text
 cover.png
 cover.jpg
 cover.jpeg
@@ -75,14 +104,14 @@ cover.webp
 cover.gif
 ```
 
-You can:
+Covers can be changed by:
 
-- Drag & drop an image onto a cover
-- Or click **Change Cover**
+- Dragging and dropping an image onto a cover
+- Clicking **Change Cover**
 
-The image will be saved automatically as:
+The image is saved automatically as:
 
-```
+```text
 library/<Manga>/cover.<ext>
 ```
 
@@ -106,7 +135,7 @@ node server.js
 
 Open:
 
-```
+```text
 http://localhost:5173
 ```
 
@@ -114,7 +143,9 @@ http://localhost:5173
 
 ## Routes
 
-- `/` → Reader
+- `/` → Library
+- `/index.html` → Reader
 - `/library.html` → Library grid
+- `/manga.html?manga=Name` → Manga page
 - `/cover?manga=Name` → Serve cover image
 - `/api/*` → Backend API endpoints
