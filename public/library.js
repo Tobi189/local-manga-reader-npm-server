@@ -94,11 +94,104 @@ function makeCard(manga) {
   return card;
 }
 
+/* -----------------------------
+   Add Manga dialog logic
+------------------------------ */
+const addMangaBtn = document.getElementById("addMangaBtn");
+const addMangaDialog = document.getElementById("addMangaDialog");
+
+const addMangaName = document.getElementById("addMangaName");
+const addMangaCover = document.getElementById("addMangaCover");
+const addMangaCoverLabel = document.getElementById("addMangaCoverLabel");
+
+const addMangaDrop = document.getElementById("addMangaDrop");
+const addMangaChoose = document.getElementById("addMangaChoose");
+const addMangaMsg = document.getElementById("addMangaMsg");
+
+const addMangaCancel = document.getElementById("addMangaCancel");
+const addMangaCreate = document.getElementById("addMangaCreate");
+
+let coverFile = null;
+
+function setCoverFile(file) {
+  coverFile = file || null;
+  addMangaCoverLabel.textContent = coverFile ? coverFile.name : "No file selected";
+}
+
+function resetAddManga() {
+  addMangaMsg.textContent = "";
+  addMangaName.value = "";
+  setCoverFile(null);
+  if (addMangaCover) addMangaCover.value = "";
+}
+
+if (addMangaBtn && addMangaDialog) {
+  addMangaBtn.addEventListener("click", () => {
+    resetAddManga();
+    addMangaDialog.showModal();
+  });
+}
+
+if (addMangaChoose && addMangaCover) {
+  addMangaChoose.addEventListener("click", () => addMangaCover.click());
+  addMangaCover.addEventListener("change", () => {
+    const f = addMangaCover.files?.[0];
+    if (f) setCoverFile(f);
+  });
+}
+
+if (addMangaDrop) {
+  addMangaDrop.addEventListener("dragover", (e) => {
+    e.preventDefault();
+    addMangaDrop.classList.add("dragover");
+  });
+  addMangaDrop.addEventListener("dragleave", () => addMangaDrop.classList.remove("dragover"));
+  addMangaDrop.addEventListener("drop", (e) => {
+    e.preventDefault();
+    addMangaDrop.classList.remove("dragover");
+    const f = e.dataTransfer.files?.[0];
+    if (f) setCoverFile(f);
+  });
+}
+
+if (addMangaCancel && addMangaDialog) {
+  addMangaCancel.addEventListener("click", () => addMangaDialog.close());
+}
+
+if (addMangaCreate && addMangaDialog) {
+  addMangaCreate.addEventListener("click", async () => {
+    const name = addMangaName.value.trim();
+    if (!name) {
+      addMangaMsg.textContent = "Name is required.";
+      return;
+    }
+
+    addMangaMsg.textContent = "Creating…";
+
+    const fd = new FormData();
+    fd.append("name", name);
+    if (coverFile) fd.append("cover", coverFile);
+
+    const r = await fetch("/api/manga/create", { method: "POST", body: fd });
+    const j = await r.json().catch(() => ({}));
+
+    if (!r.ok) {
+      addMangaMsg.textContent = j.error || "Failed.";
+      return;
+    }
+
+    addMangaDialog.close();
+    location.reload();
+  });
+}
+
+/* -----------------------------
+   Init library
+------------------------------ */
 (async function init() {
   const prefs = await apiJson("/api/prefs");
   lastChapterByManga = prefs.lastChapterByManga || {};
 
-  // Top continue button (global)
   if (continueTop) {
     const lo = prefs.lastOpened;
     if (lo && lo.manga && lo.chapter) {

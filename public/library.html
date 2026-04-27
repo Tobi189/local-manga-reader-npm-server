@@ -11,13 +11,43 @@
     <div class="row">
       <div class="muted" style="font-weight:600;">Library</div>
       <a class="linkBtn" href="/index.html">Open Reader</a>
-      <a id="continueTop" class="linkBtn hidden" href="#"></a>
+      <a id="continueTop" class="linkBtn hidden continuePill" href="#"></a>
+      <button id="addMangaBtn" class="linkBtn">Add Manga</button>
     </div>
   </div>
 
   <div class="libraryWrap">
     <div id="libraryGrid" class="libraryGrid"></div>
   </div>
+
+  <dialog id="addMangaDialog">
+    <div class="modalTitle">Add Manga</div>
+    <div class="modalGrid">
+      <label>
+        <div class="muted">Name (required)</div>
+        <input id="addMangaName" class="textInput" placeholder="e.g. ブルーロック / One Piece" />
+      </label>
+
+      <div>
+        <div class="muted">Cover (optional)</div>
+        <div id="addMangaDrop" class="fileDrop">
+          <div class="filePickerRow">
+            <input id="addMangaCover" type="file" accept="image/*" class="hidden" />
+            <button id="addMangaChoose" class="linkBtn" type="button">Choose cover… ▾</button>
+            <span class="muted" id="addMangaCoverLabel">No file selected</span>
+          </div>
+          <div class="muted" style="margin-top:8px;">Or drag & drop an image here</div>
+        </div>
+      </div>
+
+      <div id="addMangaMsg" class="muted"></div>
+
+      <div class="modalActions">
+        <button id="addMangaCancel" class="linkBtn" type="button">Cancel</button>
+        <button id="addMangaCreate" class="linkBtn" type="button">Create</button>
+      </div>
+    </div>
+  </dialog>
 
   <script src="/library.js"></script>
 </body>

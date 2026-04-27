@@ -7,8 +7,10 @@
   <link rel="stylesheet" href="/style.css"/>
 </head>
 <body>
-
-  <a class="linkBtn" href="/library.html">← Back to Library</a>
+  <div class="row" style="align-items:center;">
+    <a class="linkBtn" href="/library.html">← Back to Library</a>
+    <button id="addChaptersBtn" class="linkBtn" type="button">Add Chapter(s)</button>
+  </div>
 
   <div class="mangaHeader">
     <img id="mangaCover" class="mangaPageCover"/>
@@ -24,6 +26,34 @@
   <div class="chapterContainer">
     <div id="chapterList" class="chapterList"></div>
   </div>
+
+  <dialog id="addChaptersDialog">
+    <div class="modalTitle">Add Chapter(s)</div>
+    <div class="modalGrid">
+      <div class="muted">Upload .zip / .cbz / .rar (multiple allowed). Each file becomes a chapter folder.</div>
+
+      <div id="chaptersDrop" class="fileDrop">
+        <div class="filePickerRow">
+          <input id="chapterArchives" type="file" multiple accept=".zip,.cbz,.rar" class="hidden" />
+          <button id="chooseArchivesBtn" class="linkBtn" type="button">Choose archives… ▾</button>
+          <span class="muted" id="archivesLabel">No files selected</span>
+        </div>
+        <div class="muted" style="margin-top:8px;">Or drag & drop archives here</div>
+
+        <div id="archiveNames" class="fileNames hidden">
+          <div class="muted" style="margin-bottom:6px;">Selected files:</div>
+          <ul id="archiveList"></ul>
+        </div>
+      </div>
+
+      <div id="addChaptersMsg" class="muted"></div>
+
+      <div class="modalActions">
+        <button id="addChaptersCancel" class="linkBtn" type="button">Cancel</button>
+        <button id="uploadChaptersSave" class="linkBtn" type="button">Upload</button>
+      </div>
+    </div>
+  </dialog>
 
   <script src="/manga.js"></script>
 </body>
