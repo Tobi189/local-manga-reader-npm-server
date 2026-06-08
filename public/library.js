@@ -5,6 +5,11 @@ let lastChapterByManga = {};
 
 async function apiJson(url, opts) {
   const r = await fetch(url, opts);
+  // if auth required, kick to login
+  if (r.status === 401) {
+    location.href = "/login";
+    throw new Error("auth_required");
+  }
   if (!r.ok) throw new Error(`${r.status} ${url}`);
   return await r.json();
 }
@@ -95,7 +100,54 @@ function makeCard(manga) {
 }
 
 /* -----------------------------
-   Add Manga dialog logic
+   Share dialog logic
+------------------------------ */
+const shareBtn = document.getElementById("shareBtn");
+const shareDialog = document.getElementById("shareDialog");
+const shareUrls = document.getElementById("shareUrls");
+const shareClose = document.getElementById("shareClose");
+const shareCopy = document.getElementById("shareCopy");
+const shareMsg = document.getElementById("shareMsg");
+
+let shareFirstUrl = "";
+
+if (shareBtn && shareDialog) {
+  shareBtn.addEventListener("click", async () => {
+    shareMsg.textContent = "";
+    shareUrls.textContent = "Loading...";
+    shareDialog.showModal();
+    try {
+      const info = await apiJson("/api/server-info");
+      const urls = info.urls || [];
+      shareFirstUrl = urls[0] || "";
+      shareUrls.innerHTML = urls.length
+        ? urls.map(u => `<div style="margin:6px 0;"><a href="${u}" target="_blank">${u}</a></div>`).join("")
+        : "No LAN IP detected. Connect laptop + tablet to same Wi-Fi/hotspot.";
+    } catch (e) {
+      shareUrls.textContent = "Failed to load server info.";
+    }
+  });
+}
+
+if (shareClose && shareDialog) shareClose.addEventListener("click", () => shareDialog.close());
+
+if (shareCopy) {
+  shareCopy.addEventListener("click", async () => {
+    if (!shareFirstUrl) {
+      shareMsg.textContent = "No URL to copy.";
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(shareFirstUrl);
+      shareMsg.textContent = "Copied!";
+    } catch {
+      shareMsg.textContent = "Copy failed (browser blocked clipboard).";
+    }
+  });
+}
+
+/* -----------------------------
+   Add Manga dialog logic (your current logic)
 ------------------------------ */
 const addMangaBtn = document.getElementById("addMangaBtn");
 const addMangaDialog = document.getElementById("addMangaDialog");
@@ -154,9 +206,7 @@ if (addMangaDrop) {
   });
 }
 
-if (addMangaCancel && addMangaDialog) {
-  addMangaCancel.addEventListener("click", () => addMangaDialog.close());
-}
+if (addMangaCancel && addMangaDialog) addMangaCancel.addEventListener("click", () => addMangaDialog.close());
 
 if (addMangaCreate && addMangaDialog) {
   addMangaCreate.addEventListener("click", async () => {

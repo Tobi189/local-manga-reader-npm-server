@@ -64,16 +64,13 @@ async function downloadCurrentSpread() {
   const leftImgEl = imgs[0];
   const rightImgEl = imgs[1];
 
-  // Ensure they are loaded (or placeholder)
   await Promise.allSettled([waitImageLoaded(leftImgEl), waitImageLoaded(rightImgEl)]);
 
-  // Use natural sizes. If placeholder is used, it still has a natural size.
   const lw = leftImgEl.naturalWidth || 1;
   const lh = leftImgEl.naturalHeight || 1;
   const rw = rightImgEl.naturalWidth || 1;
   const rh = rightImgEl.naturalHeight || 1;
 
-  // Combine side-by-side (left then right, matching what you see)
   const outW = lw + rw;
   const outH = Math.max(lh, rh);
 
@@ -82,11 +79,9 @@ async function downloadCurrentSpread() {
   canvas.height = outH;
   const ctx = canvas.getContext("2d");
 
-  // White background (so transparent PNGs look nice)
   ctx.fillStyle = "#fff";
   ctx.fillRect(0, 0, outW, outH);
 
-  // Center vertically if heights differ
   const ly = Math.floor((outH - lh) / 2);
   const ry = Math.floor((outH - rh) / 2);
 
@@ -188,16 +183,16 @@ function spreadPageNumbers(si) {
 }
 
 function updateIndicators() {
+  if (downloadSpreadBtn) {
+    downloadSpreadBtn.classList.toggle("hidden", modeSel.value !== "horizontal" || pages.length === 0);
+  }
+
   if (modeSel.value !== "horizontal" || pages.length === 0) {
     pageInfo.textContent = "";
     pageIndicator.classList.add("hidden");
     pageIndicator.textContent = "";
     return;
   }
-
-  if (downloadSpreadBtn) {
-  downloadSpreadBtn.classList.toggle("hidden", modeSel.value !== "horizontal" || pages.length === 0);
-}
 
   const t = totalSpreads();
   pageInfo.textContent = `Spread ${spreadIndex + 1}/${t} (RTL)`;
@@ -252,6 +247,20 @@ function renderHorizontal() {
   const rightImg = document.createElement("img");
   rightImg.loading = "lazy";
   rightImg.src = rightSrc;
+
+  // ✅ NEW: click pages to navigate (RTL: left = forward, right = back)
+  leftImg.style.cursor = "pointer";
+  rightImg.style.cursor = "pointer";
+  leftImg.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    goNextSpreadOrChapter();
+  });
+  rightImg.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    goPrevSpreadOrChapter();
+  });
 
   leftSlot.appendChild(leftImg);
   rightSlot.appendChild(rightImg);
@@ -311,17 +320,16 @@ async function loadPages() {
   const manga = mangaSel.value;
   const chapter = chapterSel.value;
 
-  // ✅ update global shared state in JSON
   const lastChapterByManga = { ...(prefs?.lastChapterByManga || {}) };
   lastChapterByManga[manga] = chapter;
 
   await savePrefs({
-  mode: modeSel.value === "horizontal" ? "horizontal" : "vertical",
-  manga,
-  chapter,
-  lastChapterByManga,
-  lastOpened: { manga, chapter, at: new Date().toISOString() }
-});
+    mode: modeSel.value === "horizontal" ? "horizontal" : "vertical",
+    manga,
+    chapter,
+    lastChapterByManga,
+    lastOpened: { manga, chapter, at: new Date().toISOString() }
+  });
 
   pages = await apiJson(`/api/pages?manga=${encodeURIComponent(manga)}&chapter=${encodeURIComponent(chapter)}`);
 

@@ -10,9 +10,12 @@
   <div class="topbar">
     <div class="row">
       <div class="muted" style="font-weight:600;">Library</div>
+
+      <button id="shareBtn" class="linkBtn" type="button">Share</button>
       <a class="linkBtn" href="/index.html">Open Reader</a>
       <a id="continueTop" class="linkBtn hidden continuePill" href="#"></a>
-      <button id="addMangaBtn" class="linkBtn">Add Manga</button>
+      <button id="addMangaBtn" class="linkBtn" type="button">Add Manga</button>
+      <a class="linkBtn" href="/logout">Logout</a>
     </div>
   </div>
 
@@ -20,6 +23,21 @@
     <div id="libraryGrid" class="libraryGrid"></div>
   </div>
 
+  <!-- Share dialog -->
+  <dialog id="shareDialog">
+    <div class="modalTitle">Share on Wi-Fi</div>
+    <div class="modalGrid">
+      <div class="muted">Open this on your tablet (same Wi-Fi):</div>
+      <div id="shareUrls" class="fileNames"></div>
+      <div class="modalActions">
+        <button id="shareCopy" class="linkBtn" type="button">Copy first URL</button>
+        <button id="shareClose" class="linkBtn" type="button">Close</button>
+      </div>
+      <div class="muted" id="shareMsg"></div>
+    </div>
+  </dialog>
+
+  <!-- Add manga dialog (unchanged from your current design) -->
   <dialog id="addMangaDialog">
     <div class="modalTitle">Add Manga</div>
     <div class="modalGrid">

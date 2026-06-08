@@ -2,6 +2,7 @@ const crypto = require("crypto");
 const express = require("express");
 const fs = require("fs");
 const path = require("path");
+const os = require("os");
 
 const multer = require("multer");
 const unzipper = require("unzipper");
@@ -9,6 +10,8 @@ const { createExtractorFromData } = require("node-unrar-js");
 
 const app = express();
 const PORT = 5173;
+
+const ACCESS_PASSWORD = process.env.MANGA_PASSWORD || ""; // REQUIRED for LAN access
 
 app.use(express.json({ limit: "20mb" }));
 app.use(express.static(path.join(__dirname, "public"), { index: "library.html" }));
@@ -50,11 +53,10 @@ function uniqueFolder(parent, baseName) {
   return name;
 }
 
-// ✅ Fix mojibake for filenames from multipart headers (multer/busboy)
+// Fix mojibake for multipart header filenames (multer/busboy)
 function fixMultipartFilename(name) {
   try {
     const s = String(name ?? "");
-    // If it was latin1 (common), convert to utf8; if already utf8, usually harmless.
     return Buffer.from(s, "latin1").toString("utf8");
   } catch {
     return String(name ?? "");
@@ -75,6 +77,140 @@ function sortPages(files) {
     return a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" });
   });
 }
+
+/* -----------------------------
+   LAN-only + password auth
+------------------------------ */
+function parseCookies(header = "") {
+  const out = {};
+  header.split(";").forEach(part => {
+    const [k, ...v] = part.trim().split("=");
+    if (!k) return;
+    out[k] = decodeURIComponent(v.join("=") || "");
+  });
+  return out;
+}
+
+// Express req.ip can look like "::ffff:192.168.1.20"
+function normalizeIp(ip = "") {
+  if (ip.startsWith("::ffff:")) return ip.slice(7);
+  if (ip === "::1") return "127.0.0.1";
+  return ip;
+}
+
+function isPrivateIpv4(ip) {
+  // very small parser: a.b.c.d
+  const parts = ip.split(".").map(n => Number(n));
+  if (parts.length !== 4 || parts.some(n => Number.isNaN(n) || n < 0 || n > 255)) return false;
+
+  const [a, b] = parts;
+  if (a === 10) return true;
+  if (a === 127) return true;                // localhost
+  if (a === 192 && b === 168) return true;
+  if (a === 172 && b >= 16 && b <= 31) return true;
+  return false;
+}
+
+// Gate: only allow private IPv4 + localhost.
+// (If you later want IPv6 LAN too, we can extend this.)
+function isAllowedNetwork(req) {
+  const ip = normalizeIp(req.ip || req.socket?.remoteAddress || "");
+  return isPrivateIpv4(ip);
+}
+
+function isAuthed(req) {
+  if (!ACCESS_PASSWORD) return false; // force password when sharing
+  const cookies = parseCookies(req.headers.cookie || "");
+  return cookies.mr_auth === ACCESS_PASSWORD;
+}
+
+// Auth middleware: blocks everything except /login (and a couple of tiny assets)
+app.use((req, res, next) => {
+  // allow login endpoints always (still LAN-only)
+  if (req.path === "/login" || req.path === "/logout") {
+    if (!isAllowedNetwork(req)) return res.status(403).send("LAN only");
+    return next();
+  }
+
+  // block non-LAN
+  if (!isAllowedNetwork(req)) return res.status(403).send("LAN only");
+
+  // require password for everything else
+  if (!isAuthed(req)) {
+    // If it's an API request, return JSON; otherwise redirect to login
+    if (req.path.startsWith("/api/")) return res.status(401).json({ error: "auth_required" });
+    return res.redirect("/login");
+  }
+
+  next();
+});
+
+// Login page + login submit
+app.get("/login", (req, res) => {
+  res.type("html").send(`
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Login</title>
+  <style>
+    body{font-family:system-ui,Arial,sans-serif;margin:0;padding:24px;background:#fafafa}
+    .card{max-width:420px;margin:0 auto;background:#fff;border:1px solid #eee;border-radius:14px;padding:18px}
+    input{width:100%;padding:12px;border:1px solid #e9e9e9;border-radius:10px;font-size:16px}
+    button{margin-top:12px;padding:10px 14px;border:1px solid #eee;border-radius:10px;background:#fff;font-size:16px;cursor:pointer}
+    .muted{color:#666;margin-top:8px;font-size:14px}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div style="font-weight:700;font-size:18px;margin-bottom:10px;">Local Manga Reader</div>
+    <form method="POST" action="/login">
+      <input type="password" name="pw" placeholder="Password" autofocus />
+      <button type="submit">Enter</button>
+    </form>
+    <div class="muted">Ask the host for the password.</div>
+  </div>
+</body>
+</html>
+  `);
+});
+
+app.post("/login", express.urlencoded({ extended: false }), (req, res) => {
+  const pw = String(req.body?.pw || "");
+  if (!ACCESS_PASSWORD) return res.status(500).send("Server password not set.");
+  if (pw !== ACCESS_PASSWORD) return res.status(401).send("Wrong password.");
+
+  res.setHeader("Set-Cookie", `mr_auth=${encodeURIComponent(pw)}; Path=/; SameSite=Lax`);
+  res.redirect("/");
+});
+
+app.get("/logout", (req, res) => {
+  res.setHeader("Set-Cookie", `mr_auth=; Path=/; Max-Age=0; SameSite=Lax`);
+  res.redirect("/login");
+});
+
+/* -----------------------------
+   Share info endpoint (LAN URLs)
+------------------------------ */
+function getLanIps() {
+  const nets = os.networkInterfaces();
+  const out = [];
+  for (const name of Object.keys(nets)) {
+    for (const net of nets[name] || []) {
+      if (net.family === "IPv4" && !net.internal) out.push(net.address);
+    }
+  }
+  return out;
+}
+
+app.get("/api/server-info", (req, res) => {
+  const ips = getLanIps();
+  res.json({
+    port: PORT,
+    urls: ips.map(ip => `http://${ip}:${PORT}`)
+  });
+});
 
 /* -----------------------------
    Prefs saved to ./data/state.json (GLOBAL shared)
@@ -309,13 +445,12 @@ app.post("/api/cover", (req, res) => {
 /* -----------------------------
    Add Manga + Upload Chapters
 ------------------------------ */
-
 const UPLOAD_DIR = path.join(__dirname, "data", "_uploads");
 ensureDir(UPLOAD_DIR);
 
 const upload = multer({
   dest: UPLOAD_DIR,
-  limits: { fileSize: 1024 * 1024 * 1024 } // 1GB per file
+  limits: { fileSize: 1024 * 1024 * 1024 }
 });
 
 app.post("/api/manga/create", upload.single("cover"), (req, res) => {
@@ -333,9 +468,7 @@ app.post("/api/manga/create", upload.single("cover"), (req, res) => {
     if (req.file) {
       const oname = fixMultipartFilename(req.file.originalname);
       const ext = path.extname(oname).toLowerCase();
-      if (IMAGE_EXTS.has(ext)) {
-        fs.copyFileSync(req.file.path, path.join(mangaPath, "cover" + ext));
-      }
+      if (IMAGE_EXTS.has(ext)) fs.copyFileSync(req.file.path, path.join(mangaPath, "cover" + ext));
       try { fs.unlinkSync(req.file.path); } catch {}
     }
 
@@ -403,11 +536,8 @@ app.post("/api/chapters/upload", upload.array("archives", 50), async (req, res) 
       const dest = path.join(mangaPath, chapterFolder);
       fs.mkdirSync(dest, { recursive: true });
 
-      if (ext === ".zip" || ext === ".cbz") {
-        await extractZip(f.path, dest);
-      } else {
-        extractRar(f.path, dest);
-      }
+      if (ext === ".zip" || ext === ".cbz") await extractZip(f.path, dest);
+      else extractRar(f.path, dest);
 
       created.push(chapterFolder);
       try { fs.unlinkSync(f.path); } catch {}
@@ -421,6 +551,6 @@ app.post("/api/chapters/upload", upload.array("archives", 50), async (req, res) 
 
 app.listen(PORT, () => {
   console.log(`Manga reader running at http://localhost:${PORT}`);
-  console.log("Library root:", LIBRARY_ROOT);
-  console.log("Prefs file:", STATE_PATH);
+  console.log("LAN URLs:", getLanIps().map(ip => `http://${ip}:${PORT}`).join(" , "));
+  console.log("Password required:", ACCESS_PASSWORD ? "YES" : "NO (set MANGA_PASSWORD!)");
 });
