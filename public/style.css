@@ -150,8 +150,20 @@ dialog::backdrop {
 #pages.vertical img {
   width: min(100%, 900px);
   display: block;
-  margin: 12px auto;
+  margin: 0 auto;
   height: auto;
+}
+
+#pages.vertical img:first-child {
+  margin-top: 12px;
+}
+
+#pages.vertical img + img {
+  margin-top: var(--vertical-page-gap, 10px);
+}
+
+#pages.vertical img:last-child {
+  margin-bottom: 12px;
 }
 
 /* ----------------------------

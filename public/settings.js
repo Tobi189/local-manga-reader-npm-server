@@ -5,6 +5,8 @@ const setDownloadFormat = el("setDownloadFormat");
 const setJpgQuality = el("setJpgQuality");
 const jpgQualityLabel = el("jpgQualityLabel");
 const setShowDownloadSides = el("setShowDownloadSides");
+const setVerticalPageGap = el("setVerticalPageGap");
+const verticalPageGapLabel = el("verticalPageGapLabel");
 const saveBtn = el("saveSettings");
 const saveMsg = el("saveMsg");
 
@@ -15,46 +17,96 @@ async function apiJson(url, opts) {
 }
 
 function updateQualityLabel() {
-  jpgQualityLabel.textContent = `Quality: ${Number(setJpgQuality.value).toFixed(2)}`;
+  jpgQualityLabel.textContent =
+    `Quality: ${Number(setJpgQuality.value).toFixed(2)}`;
+}
+
+function updateVerticalPageGapLabel() {
+  verticalPageGapLabel.textContent =
+    `Gap: ${Number(setVerticalPageGap.value)}px`;
 }
 
 async function loadSettings() {
   const prefs = await apiJson("/api/prefs");
   const s = prefs.settings || {};
 
-  setLibrarySort.value = s.librarySort === "lastOpened" ? "lastOpened" : "name";
-  setDownloadFormat.value = s.downloadFormat === "jpg" ? "jpg" : "png";
-  setJpgQuality.value = (typeof s.jpgQuality === "number") ? String(s.jpgQuality) : "0.9";
-  setShowDownloadSides.checked = !!s.showDownloadSides;
+  setLibrarySort.value =
+    s.librarySort === "lastOpened"
+      ? "lastOpened"
+      : "name";
+
+  setDownloadFormat.value =
+    s.downloadFormat === "jpg"
+      ? "jpg"
+      : "png";
+
+  setJpgQuality.value =
+    typeof s.jpgQuality === "number"
+      ? String(s.jpgQuality)
+      : "0.9";
+
+  setShowDownloadSides.checked =
+    !!s.showDownloadSides;
+
+  setVerticalPageGap.value =
+    Number.isInteger(s.verticalPageGap)
+      ? String(s.verticalPageGap)
+      : "10";
 
   updateQualityLabel();
+  updateVerticalPageGapLabel();
 }
 
 async function saveSettings() {
   const patch = {
     settings: {
-      librarySort: setLibrarySort.value === "lastOpened" ? "lastOpened" : "name",
-      downloadFormat: setDownloadFormat.value === "jpg" ? "jpg" : "png",
-      jpgQuality: Number(setJpgQuality.value),
-      showDownloadSides: !!setShowDownloadSides.checked
+      librarySort:
+        setLibrarySort.value === "lastOpened"
+          ? "lastOpened"
+          : "name",
+
+      downloadFormat:
+        setDownloadFormat.value === "jpg"
+          ? "jpg"
+          : "png",
+
+      jpgQuality:
+        Number(setJpgQuality.value),
+
+      showDownloadSides:
+        !!setShowDownloadSides.checked,
+
+      verticalPageGap:
+        Number(setVerticalPageGap.value)
     }
   };
 
   await apiJson("/api/prefs", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json"
+    },
     body: JSON.stringify(patch)
   });
 }
 
-setJpgQuality.addEventListener("input", updateQualityLabel);
+setJpgQuality.addEventListener(
+  "input",
+  updateQualityLabel
+);
+
+setVerticalPageGap.addEventListener(
+  "input",
+  updateVerticalPageGapLabel
+);
 
 saveBtn.addEventListener("click", async () => {
   saveMsg.textContent = "";
+
   try {
     await saveSettings();
     saveMsg.textContent = "Saved!";
-  } catch (e) {
+  } catch {
     saveMsg.textContent = "Failed to save.";
   }
 });

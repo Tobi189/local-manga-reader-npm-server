@@ -493,11 +493,12 @@ const DEFAULT_STATE = {
     at: ""
   },
   settings: {
-    librarySort: "name",
-    showDownloadSides: false,
-    downloadFormat: "png",
-    jpgQuality: 0.9
-  }
+  librarySort: "name",
+  showDownloadSides: false,
+  downloadFormat: "png",
+  jpgQuality: 0.9,
+  verticalPageGap: 10
+}
 };
 
 function readState() {
@@ -592,11 +593,18 @@ function readState() {
                   : "png",
 
               jpgQuality:
-                typeof obj.settings.jpgQuality === "number" &&
-                obj.settings.jpgQuality >= 0.1 &&
-                obj.settings.jpgQuality <= 1
-                  ? obj.settings.jpgQuality
-                  : 0.9
+  typeof obj.settings.jpgQuality === "number" &&
+  obj.settings.jpgQuality >= 0.1 &&
+  obj.settings.jpgQuality <= 1
+    ? obj.settings.jpgQuality
+    : 0.9,
+
+verticalPageGap:
+  Number.isInteger(obj.settings.verticalPageGap) &&
+  obj.settings.verticalPageGap >= 0 &&
+  obj.settings.verticalPageGap <= 10
+    ? obj.settings.verticalPageGap
+    : 10
             }
           : {
               ...DEFAULT_STATE.settings
@@ -730,6 +738,22 @@ app.post("/api/prefs", (req, res) => {
           quality;
       }
     }
+
+    if (
+  typeof patch.settings.verticalPageGap === "number"
+) {
+  const verticalPageGap = Math.round(
+    patch.settings.verticalPageGap
+  );
+
+  if (
+    verticalPageGap >= 0 &&
+    verticalPageGap <= 10
+  ) {
+    state.settings.verticalPageGap =
+      verticalPageGap;
+  }
+}
   }
 
   writeState(state);
